@@ -499,7 +499,7 @@ function onNameInput() {
   box.innerHTML = suggestMatches.map((c,i)=>`
     <div class="suggest-item" onclick="pickClient(${i})">
       <div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div>
-      <div class="suggest-sub">電話 ${c.phone}　生日 ${c.birth}</div>
+      <div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div>
     </div>`).join('');
   box.style.display = 'block';
 }
@@ -738,7 +738,7 @@ function calcRemaining() {
 // ── 建立預覽 ──
 function buildPreview() {
   document.getElementById('p-name').textContent = document.getElementById('f-name').value||'（未填）';
-  document.getElementById('p-sub').textContent = [document.getElementById('f-phone').value, document.getElementById('f-birth').value].filter(Boolean).join('　');
+  document.getElementById('p-sub').textContent = [document.getElementById('f-birth').value, document.getElementById('f-phone').value].filter(Boolean).join('　');
   document.getElementById('p-owner').textContent = document.getElementById('f-owner').value||'—';
   document.getElementById('p-doctor').textContent = document.getElementById('f-doctor').value||'—';
   document.getElementById('p-ref').textContent = document.getElementById('f-ref').value||'—';
