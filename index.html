@@ -188,8 +188,8 @@ body{padding-bottom:40px}
         <input id="f-name" type="text" placeholder="輸入姓名搜尋" oninput="onNameInput()" autocomplete="off">
         <div class="suggest-box" id="suggest-box" style="display:none"></div>
       </div>
-      <div class="field"><label>電話</label><input id="f-phone" type="tel" placeholder="0912-345-678"></div>
       <div class="field"><label>生日</label><input id="f-birth" type="date"></div>
+      <div class="field"><label>電話</label><input id="f-phone" type="tel" placeholder="0912-345-678"></div>
     </div>
     <div class="grid4">
       <div class="field"><label>負責人</label>
@@ -368,6 +368,7 @@ body{padding-bottom:40px}
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8B2h-xFiHvI81mFL2tmpYmQ6VaDXXsB9khA1PepOWn5VCkZom8xztFJe2AjD79h8B/exec';
+const API_SECRET = '2026littlesectet1103';
 const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
 const THERAPY_UNIT = {
@@ -390,7 +391,7 @@ const payState={};
 async function loadClients() {
   setSyncState('loading','載入客戶資料…');
   try {
-    const res = await fetch(APPS_SCRIPT_URL+'?action=getClients');
+    const res = await fetch(APPS_SCRIPT_URL+'?action=getClients&secret='+API_SECRET);
     const json = await res.json();
     if(json.status==='ok'){ CLIENT_DB=json.clients||[]; setSyncState('ok',`已連線 (${CLIENT_DB.length} 位客戶)`); }
     else throw new Error(json.message);
@@ -484,7 +485,7 @@ function renderClientStatus(c){
 // ── 當日儲值 ──
 function updateTopupCard(){
   const card=document.getElementById('topup-card');
-  const show=(currentId==='vip'||currentId==='mem')&&selectedClient;
+  const show=(currentId==='vip'||currentId==='mem');
   card.style.display=show?'block':'none';
   if(!show)return;
   const isVip=currentId==='vip';
@@ -576,7 +577,7 @@ function calcTotal(){
   // 回饋金計算（會員 2%，以實際付費金額計算，不含儲值）
   if(currentId==='mem'){
     const cbThis=Math.floor(sub*CASHBACK_RATE);
-    const cbHistory=selectedClient?(selectedClient.cashback_remain||0):0;
+    const cbHistory=(selectedClient&&selectedClient.cashback_remain)||0;
     const cbAfter=cbHistory-cbD+cbThis;
     const ci=document.getElementById('cashback-info-card');
     if(ci){ci.style.display='block';document.getElementById('cb-this').textContent=fmt(cbThis);document.getElementById('cb-history').textContent=fmt(cbHistory);document.getElementById('cb-after').textContent=fmt(cbAfter);}
@@ -590,12 +591,12 @@ function setupPaymentTab(){
   const ds=document.getElementById('deduct-section');
   ds.innerHTML='';
   const c=selectedClient;
-  if(!c||(currentId!=='vip'&&currentId!=='mem')){calcTotal();return;}
+  if(currentId!=='vip'&&currentId!=='mem'){calcTotal();return;}
   const isVip=currentId==='vip';
-  const creditRemain=isVip?(c.vip_remain||0):(c.mem_remain||0);
+  const creditRemain=c?(isVip?(c.vip_remain||0):(c.mem_remain||0)):0;
   const topup=getTopup();
   const effectiveCredit=creditRemain+topup;
-  const cbRemain=(!isVip)?(c.cashback_remain||0):0;
+  const cbRemain=(!isVip&&c)?(c.cashback_remain||0):0;
   const label=isVip?'VIP 儲值金':'會員儲值金';
 
   // 儲值金折抵
@@ -783,6 +784,7 @@ async function submitOrder(){
   const idLabels={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
   const payload={
     action:'writeOrder',
+    secret:API_SECRET,
     clientName:name,phone:document.getElementById('f-phone').value,birth:document.getElementById('f-birth').value,
     idType:idLabels[currentId]||'一般',owner:document.getElementById('f-owner').value,
     doctor:document.getElementById('f-doctor').value,referrer:document.getElementById('f-ref').value,
