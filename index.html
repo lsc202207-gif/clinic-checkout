@@ -453,11 +453,17 @@ const payState={};
 async function loadClients() {
   setSyncState('loading','載入客戶資料…');
   try {
-    const res = await fetch(APPS_SCRIPT_URL+'?action=getClients&secret='+API_SECRET);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90000);
+    const res = await fetch(APPS_SCRIPT_URL+'?action=getClients&secret='+API_SECRET, {signal: controller.signal});
+    clearTimeout(timer);
     const json = await res.json();
     if(json.status==='ok'){ CLIENT_DB=json.clients||[]; setSyncState('ok',`已連線 (${CLIENT_DB.length} 位客戶)`); }
     else throw new Error(json.message);
-  } catch(e){ setSyncState('err','離線模式'); showToast('⚠ 無法連線，使用離線模式'); }
+  } catch(e){
+    if(e.name==='AbortError'){ setSyncState('err','載入逾時'); showToast('⚠ 載入逾時，請重新整理頁面'); }
+    else { setSyncState('err','離線模式'); showToast('⚠ 無法連線，使用離線模式'); }
+  }
 }
 
 function setSyncState(s,t){
@@ -526,6 +532,7 @@ document.addEventListener('click',e=>{ if(!e.target.closest('.name-wrap'))docume
 
 // ── 客戶狀態 ──
 function renderClientStatus(c){
+  console.log('[debug] renderClientStatus:', JSON.stringify({id:c.id, mem:c.mem_remain, vip:c.vip_remain, cb:c.cashback_remain, pkgs:c.packages?.length}));
   document.getElementById('client-status-card').style.display='block';
   const active=(c.packages||[]).filter(p=>p.used<p.total);
   const done=(c.packages||[]).filter(p=>p.used>=p.total);
