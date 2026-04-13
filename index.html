@@ -867,11 +867,9 @@ async function submitOrder(){
     pay_installment:parseFloat(payState['無卡分期']?.amount)||0,
     pay_installmentBank:payState['無卡分期']?.bank||'',
     creditType:currentId==='vip'?'VIP':currentId==='mem'?'會員':'',
-    creditRemainBefore: (cd>0||topup>0) ? maxD : null,
-    creditRemainAfter:  (cd>0||topup>0) ? Math.max(0,maxD-cd) : null,
+    creditRemainBefore: maxD,
     cashbackDeductAmt:  cbd,
-    cashbackRemainBefore: (cbThis>0||cbd>0) ? cbHistory : null,
-    cashbackRemainAfter:  (cbThis>0||cbd>0) ? Math.max(0,cbHistory-cbd+cbThis) : null,
+    cashbackRemainBefore: cbHistory,
     cashbackEarned: cbThis,
     note:document.getElementById('f-note').value,
     purchaseItems,serviceItems,remainingPackages:calcRemaining()
