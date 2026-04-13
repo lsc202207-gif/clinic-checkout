@@ -265,8 +265,8 @@ body{padding-bottom:40px}
     <div class="card-title">付款方式（可多選）</div>
     <div class="pay-chips">
       <div class="pay-chip" id="chip-現金" onclick="togglePay('現金')">現金</div>
-      <div class="pay-chip" id="chip-無卡分期" onclick="togglePay('無卡分期')">無卡分期</div>
       <div class="pay-chip" id="chip-轉帳" onclick="togglePay('轉帳')">轉帳</div>
+      <div class="pay-chip" id="chip-無卡分期" onclick="togglePay('無卡分期')">無卡分期</div>
     </div>
     <div id="pay-entries"></div>
     <div class="sum-area">
@@ -358,6 +358,66 @@ body{padding-bottom:40px}
     <button class="btn-secondary" onclick="goTab('payment',document.querySelectorAll('.tab-btn')[1])">← 返回修改</button>
   </div>
   <button class="btn-submit" id="submit-btn" onclick="submitOrder()">確認結帳並寫入 Google Sheets</button>
+</div>
+
+
+<!-- ══════ TAB 4 課程轉讓 ══════ -->
+<div class="tab-content" id="tab-transfer">
+  <div class="card">
+    <div class="card-title">課程轉讓</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">將客戶尚未使用的課程轉讓給另一位客戶，系統自動更新雙方餘額並記錄轉讓紀錄。</div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">轉讓人（課程來源）</div>
+    <div class="grid3" style="margin-bottom:10px">
+      <div class="field" style="position:relative">
+        <label>客戶姓名</label>
+        <input id="tr-from-name" type="text" placeholder="輸入姓名搜尋" oninput="onTransferSearch('from')" autocomplete="off">
+        <div class="suggest-box" id="tr-from-suggest" style="display:none"></div>
+      </div>
+      <div class="field"><label>生日（核對）</label><input id="tr-from-birth" type="date" readonly style="background:var(--surface2)"></div>
+      <div class="field"><label>電話</label><input id="tr-from-phone" type="text" readonly style="background:var(--surface2)"></div>
+    </div>
+    <div id="tr-from-packages" style="display:none;margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">可轉讓課程</div>
+      <div id="tr-from-pkg-list"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">受讓人（課程接收）</div>
+      <div class="grid3">
+        <div class="field" style="position:relative">
+          <label>客戶姓名</label>
+          <input id="tr-to-name" type="text" placeholder="輸入姓名搜尋" oninput="onTransferSearch('to')" autocomplete="off">
+          <div class="suggest-box" id="tr-to-suggest" style="display:none"></div>
+        </div>
+        <div class="field"><label>生日（核對）</label><input id="tr-to-birth" type="date" readonly style="background:var(--surface2)"></div>
+        <div class="field"><label>電話</label><input id="tr-to-phone" type="text" readonly style="background:var(--surface2)"></div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">轉讓設定</div>
+      <div class="grid3">
+        <div class="field">
+          <label>療程名稱</label>
+          <select id="tr-therapy" onchange="updateTransferHint()"><option value="">請先選擇轉讓人</option></select>
+        </div>
+        <div class="field">
+          <label>轉讓數量</label>
+          <input id="tr-qty" type="number" min="1" value="1">
+        </div>
+        <div class="field">
+          <label>單位</label>
+          <input id="tr-unit" type="text" readonly style="background:var(--surface2)">
+        </div>
+      </div>
+      <div id="tr-remain-hint" style="font-size:13px;color:var(--text2);margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);display:none"></div>
+    </div>
+
+    <div id="tr-error" style="display:none;margin-top:12px" class="warn-item err"></div>
+    <div id="tr-success" style="display:none;margin-top:12px;background:var(--ok-bg);color:var(--ok);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:500"></div>
+  </div>
+  <button class="btn-submit" id="tr-submit-btn" onclick="submitTransfer()">確認轉讓並寫入記錄</button>
 </div>
 
 <div class="success-overlay" id="success-overlay">
@@ -672,7 +732,16 @@ function renderPayEntries(){
   let html='';
   Object.keys(payState).forEach(m=>{
     html+=`<div class="pay-entry"><div class="pay-entry-row"><span class="pay-name">${m}</span><input class="pay-input" type="number" placeholder="金額" value="${payState[m].amount}" oninput="payState['${m}'].amount=this.value;updateDiffBar()"><span style="font-size:13px;color:var(--text2)">元</span></div>`;
-    if(m==='轉帳'){html+=`<div class="bank-btns">`;['合庫','台新','中信','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});html+=`</div>`;}
+    if(m==='轉帳'){
+      html+=`<div class="bank-btns">`;
+      ['合庫','台新','中信','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
+      html+=`</div>`;
+    }
+    if(m==='無卡分期'){
+      html+=`<div class="bank-btns">`;
+      ['中租','裕富'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
+      html+=`</div>`;
+    }
     html+=`</div>`;
   });
   document.getElementById('pay-entries').innerHTML=html;
@@ -693,7 +762,7 @@ function updateDiffBar(){
 }
 
 function getPaySummary(){
-  const parts=Object.entries(payState).map(([m,v])=>{let s=m;if(v.amount)s+=` NT$${parseInt(v.amount).toLocaleString()}`;if(m==='轉帳'&&v.bank)s+=`(${v.bank})`;return s;});
+  const parts=Object.entries(payState).map(([m,v])=>{let s=m;if(v.amount)s+=` NT$${parseInt(v.amount).toLocaleString()}`;if((m==='轉帳'||m==='無卡分期')&&v.bank)s+=`(${v.bank})`;return s;});
   const cd=getCreditDeduct();if(cd>0)parts.push((currentId==='vip'?'VIP':'會員')+`儲值金折抵 NT$${cd.toLocaleString()}`);
   const cbd=getCashbackDeduct();if(cbd>0)parts.push(`回饋金折抵 NT$${cbd.toLocaleString()}`);
   return parts.length?parts.join(' + '):'—';
@@ -796,6 +865,7 @@ async function submitOrder(){
     pay_transfer:parseFloat(payState['轉帳']?.amount)||0,
     pay_transferBank:payState['轉帳']?.bank||'',
     pay_installment:parseFloat(payState['無卡分期']?.amount)||0,
+    pay_installmentBank:payState['無卡分期']?.bank||'',
     creditType:currentId==='vip'?'VIP':currentId==='mem'?'會員':'',
     creditRemainBefore:maxD,creditRemainAfter:cd>0||topup>0?Math.max(0,maxD-cd):undefined,
     cashbackDeductAmt:cbd,cashbackRemainBefore:cbHistory,cashbackRemainAfter:Math.max(0,cbHistory-cbd+cbThis),
