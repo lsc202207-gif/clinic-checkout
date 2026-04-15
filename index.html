@@ -993,8 +993,8 @@ async function submitOrder(){
   const cbThis=currentId==='mem'?Math.floor(sub*CASHBACK_RATE):0;
   const cbHistory=selectedClient?(selectedClient.cashback_remain||0):0;
   const purchaseItems=[],serviceItems=[];
-  document.querySelectorAll('#purchase-list .t-row-buy').forEach(r=>{const n=r.querySelector('select').value;if(!n)return;purchaseItems.push({name:n,qty:parseFloat(r.querySelectorAll('input')[0].value)||1,unit:r.querySelector('.unit-display').textContent,price:parseFloat(r.querySelectorAll('input')[1].value)||0});});
-  document.querySelectorAll('#service-list .t-row-svc').forEach(r=>{const n=r.querySelector('select').value;if(!n)return;serviceItems.push({name:n,qty:parseFloat(r.querySelectorAll('input')[0].value)||1,unit:r.querySelector('.unit-display').textContent,note:r.querySelector('input[type=text]').value||''});});
+  document.querySelectorAll('#purchase-list .t-row-buy').forEach(r=>{const n=r.querySelector('select')?.value;if(!n)return;const inputs=r.querySelectorAll('input[type=number]');purchaseItems.push({name:n,qty:parseFloat(inputs[0]?.value)||1,unit:r.querySelector('.unit-display')?.textContent||'',price:parseFloat(inputs[1]?.value)||0});});
+  document.querySelectorAll('#service-list .t-row-svc').forEach(r=>{const n=r.querySelector('select')?.value;if(!n)return;const inputs=r.querySelectorAll('input');const qtyInput=Array.from(inputs).find(i=>i.type==='number');const noteInput=Array.from(inputs).find(i=>i.type==='text');serviceItems.push({name:n,qty:parseFloat(qtyInput?.value)||1,unit:r.querySelector('.unit-display')?.textContent||'',note:noteInput?.value||''});});
   const idLabels={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
   const payload={
     action:'writeOrder',
@@ -1015,7 +1015,8 @@ async function submitOrder(){
     cashbackRemainBefore: cbHistory,
     cashbackEarned: cbThis,
     note:document.getElementById('f-note').value,
-    purchaseItems,serviceItems,remainingPackages:calcRemaining()
+    purchaseItems,serviceItems,remainingPackages:calcRemaining(),
+    updateClientInfo: !!(document.getElementById('f-ref').value || currentId)
   };
   try{
     const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
