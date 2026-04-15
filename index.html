@@ -29,8 +29,8 @@ body{padding-bottom:40px}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:#6fcf97}
 .sync-dot.loading{background:#f2c94c;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:53px;z-index:99}
-.tab-btn{flex:1;padding:12px 8px;font-size:13px;font-weight:500;color:var(--text2);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:53px;z-index:99;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tab-btn{flex:1;padding:12px 8px;font-size:13px;font-weight:500;color:var(--text2);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;min-width:72px}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .tab-content{display:none;padding:16px;max-width:860px;margin:0 auto}
 .tab-content.active{display:block}
@@ -82,6 +82,9 @@ body{padding-bottom:40px}
 .t-row-svc{grid-template-columns:1fr 80px 56px 1fr 32px}
 .t-row select,.t-row input[type=number],.t-row input[type=text]{padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--surface);color:var(--text);width:100%;font-family:inherit}
 .unit-display{font-size:13px;color:var(--text2);padding:6px 4px;text-align:center;background:var(--surface2);border-radius:var(--radius-sm);font-weight:500}
+.row-label{display:none;font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.row-field{display:contents}
+.row-field-sm{display:contents}
 .del-btn{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0;line-height:1}
 .del-btn:hover{color:var(--err)}
 .add-row-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;padding:8px 0;background:none;border:none;font-family:inherit;margin-top:4px}
@@ -149,8 +152,80 @@ body{padding-bottom:40px}
 .btn-new{padding:14px 36px;background:#fff;color:var(--accent);border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a18;color:#fff;padding:12px 22px;border-radius:100px;font-size:14px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-@media(max-width:600px){.grid3,.grid4{grid-template-columns:1fr 1fr}.preview-grid{grid-template-columns:1fr 1fr}.thead-buy,.t-row-buy{grid-template-columns:1fr 72px 50px 88px 28px}.thead-svc,.t-row-svc{grid-template-columns:1fr 72px 50px 1fr 28px}.cashback-summary{grid-template-columns:1fr 1fr}.topup-grid{grid-template-columns:1fr}}
-@media(max-width:420px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.preview-grid{grid-template-columns:1fr}}
+
+/* ── 平板 ≤ 768px ── */
+@media(max-width:768px){
+  .tab-content{padding:12px}
+  .grid4{grid-template-columns:1fr 1fr}
+  .preview-grid{grid-template-columns:1fr 1fr}
+  .cashback-summary{grid-template-columns:1fr 1fr}
+  .pay-input{width:120px}
+}
+
+/* ── 手機 ≤ 600px ── */
+@media(max-width:600px){
+  body{font-size:14px}
+  .topbar{padding:11px 14px}
+  .topbar-title{font-size:15px}
+  .tab-btn{font-size:12px;padding:10px 4px}
+  .tab-content{padding:10px}
+  .card{padding:12px;margin-bottom:10px}
+  .card-title{font-size:10px}
+
+  /* 表單欄位 */
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .preview-grid{grid-template-columns:1fr 1fr}
+
+  /* 療程表格：手機上改為堆疊式卡片，不用 grid */
+  .therapy-thead{display:none}
+  .row-label{display:block}
+  .row-field{display:flex;flex-direction:column;width:100%}
+  .row-field-sm{display:flex;flex-direction:column;width:100%}
+  .t-row-buy{display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;border:none}
+  .t-row-svc{display:flex;flex-direction:column;gap:6px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px;border:none}
+  .t-row-buy:last-child,.t-row-svc:last-child{border:none}
+  .t-row select,.t-row input[type=number],.t-row input[type=text]{font-size:14px;padding:8px 10px}
+  .unit-display{text-align:left;padding:6px 10px;font-size:13px}
+  .del-btn{align-self:flex-end;font-size:16px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--err);background:var(--err-bg)}
+
+  /* 付款 */
+  .pay-chip{padding:8px 12px;font-size:13px}
+  .pay-input{width:100%}
+  .pay-entry-row{flex-direction:column;align-items:flex-start}
+  .bank-btns{flex-wrap:wrap}
+
+  /* 預覽 */
+  .preview-grid{grid-template-columns:1fr 1fr}
+  .preview-cell .val{font-size:13px}
+
+  /* 回饋金 */
+  .cashback-summary{grid-template-columns:1fr}
+
+  /* 儲值 */
+  .topup-grid{grid-template-columns:1fr}
+
+  /* 按鈕 */
+  .btn-row{flex-direction:column-reverse}
+  .btn-primary,.btn-secondary{width:100%;text-align:center}
+  .btn-submit{font-size:15px;padding:14px}
+
+  /* 金額摘要 */
+  .sum-total-row{font-size:15px}
+  #sum-total{font-size:18px}
+
+  /* 差額提示 */
+  .diff-bar{flex-direction:column;gap:4px;align-items:flex-start}
+
+  /* 課程轉讓 */
+  .btn-submit{font-size:14px}
+}
+
+/* ── 超小螢幕 ≤ 380px ── */
+@media(max-width:380px){
+  .tab-btn{font-size:11px;padding:9px 2px}
+  .id-chip{padding:7px 12px;font-size:13px}
+  .preview-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -585,12 +660,22 @@ function onTopupChange(){ updateTopupCard(); calcTotal(); }
 // ── 療程列 ──
 function addBuyRow(){
   const d=document.createElement('div');d.className='t-row t-row-buy';
-  d.innerHTML=`<select onchange="onTherapyChange(this,'buy')">${TH_OPTS}</select><input type="number" value="1" min="1" max="9999" style="width:80px" oninput="checkSvcWarnings()"><div class="unit-display">—</div><input type="number" placeholder="0" oninput="calcTotal()"><button class="del-btn" onclick="this.closest('.t-row-buy').remove();calcTotal();checkSvcWarnings()">×</button>`;
+  d.innerHTML=`
+    <div class="row-field"><span class="row-label">療程內容</span><select onchange="onTherapyChange(this,'buy')">${TH_OPTS}</select></div>
+    <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="1" min="1" max="9999" oninput="checkSvcWarnings()"></div>
+    <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">—</div></div>
+    <div class="row-field row-field-sm"><span class="row-label">金額(NT$)</span><input type="number" placeholder="0" oninput="calcTotal()"></div>
+    <button class="del-btn" onclick="this.closest('.t-row-buy').remove();calcTotal();checkSvcWarnings()">×</button>`;
   document.getElementById('purchase-list').appendChild(d);
 }
 function addSvcRow(){
   const d=document.createElement('div');d.className='t-row t-row-svc';
-  d.innerHTML=`<select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select><input type="number" value="1" min="1" max="9999" style="width:80px" oninput="checkSvcWarnings()"><div class="unit-display">—</div><input type="text" placeholder="備註"><button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
+  d.innerHTML=`
+    <div class="row-field"><span class="row-label">施作內容</span><select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select></div>
+    <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="1" min="1" max="9999" oninput="checkSvcWarnings()"></div>
+    <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">—</div></div>
+    <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
+    <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
   document.getElementById('service-list').appendChild(d);
 }
 function onTherapyChange(sel,type){
