@@ -531,24 +531,15 @@ async function loadClients() {
 }
 
 // 搜尋客戶（輸入姓名後呼叫後端）
-let searchTimer = null;
 async function searchClients(query) {
   if (!query || query.trim().length < 1) { CLIENT_DB = []; return; }
-  clearTimeout(searchTimer);
-  return new Promise(resolve => {
-    searchTimer = setTimeout(async () => {
-      setSyncState('loading','搜尋中…');
-      try {
-        const res = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(query.trim()));
-        const json = await res.json();
-        if(json.status==='ok'){
-          CLIENT_DB = json.clients || [];
-          setSyncState('ok', '已連線');
-        } else throw new Error(json.message);
-      } catch(e){ setSyncState('err','搜尋失敗'); }
-      resolve();
-    }, 350); // 輸入停頓 350ms 才送出，避免每個字都查詢
-  });
+  setSyncState('loading','搜尋中…');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(query.trim()));
+    const json = await res.json();
+    if(json.status==='ok'){ CLIENT_DB=json.clients||[]; setSyncState('ok','已連線'); }
+    else throw new Error(json.message);
+  } catch(e){ setSyncState('err','搜尋失敗'); showToast('搜尋失敗，請確認網路連線'); }
 }
 
 function setSyncState(s,t){
@@ -577,22 +568,28 @@ function selectId(t){
 }
 
 // ── 搜尋 ──
-async function onNameInput(){
+let _nameTimer = null;
+function onNameInput(){
   const val=document.getElementById('f-name').value.trim();
   const box=document.getElementById('suggest-box');
   selectedClient=null;
   document.getElementById('client-status-card').style.display='none';
   document.getElementById('ref-note').style.display='none';
   updateTopupCard();
-  if(!val){box.style.display='none';CLIENT_DB=[];return;}
+  if(!val){box.style.display='none';CLIENT_DB=[];clearTimeout(_nameTimer);return;}
   box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">搜尋中…</div>';
   box.style.display='block';
-  await searchClients(val);
-  suggestMatches=CLIENT_DB.filter(c=>c.name.includes(val));
-  if(!suggestMatches.length){box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>';return;}
-  const idLabel={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
-  box.innerHTML=suggestMatches.map((c,i)=>`<div class="suggest-item" onclick="pickClient(${i})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
-  box.style.display='block';
+  clearTimeout(_nameTimer);
+  _nameTimer = setTimeout(async()=>{
+    await searchClients(val);
+    const cur=document.getElementById('f-name').value.trim();
+    if(cur!==val) return; // 使用者繼續輸入，丟棄舊結果
+    suggestMatches=CLIENT_DB.filter(c=>c.name.includes(val));
+    if(!suggestMatches.length){box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>';return;}
+    const idLabel={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
+    box.innerHTML=suggestMatches.map((c,i)=>`<div class="suggest-item" onclick="pickClient(${i})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
+    box.style.display='block';
+  }, 400);
 }
 
 function pickClient(i){
@@ -1018,7 +1015,8 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ════════════════════════════════
 let trFromClient = null, trToClient = null;
 
-async function onTransferSearch(side){
+let _trTimer = {};
+function onTransferSearch(side){
   const inputId=side==='from'?'tr-from-name':'tr-to-name';
   const suggestId=side==='from'?'tr-from-suggest':'tr-to-suggest';
   const val=document.getElementById(inputId).value.trim();
@@ -1027,12 +1025,17 @@ async function onTransferSearch(side){
   if(!val){box.style.display='none';return;}
   box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">搜尋中…</div>';
   box.style.display='block';
-  await searchClients(val);
-  const matches=CLIENT_DB.filter(c=>c.name.includes(val));
-  if(!matches.length){box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>';return;}
-  const idLabel={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
-  box.innerHTML=matches.map((c,i)=>`<div class="suggest-item" onclick="pickTransferClient('${side}',${CLIENT_DB.indexOf(c)})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
-  box.style.display='block';
+  clearTimeout(_trTimer[side]);
+  _trTimer[side]=setTimeout(async()=>{
+    await searchClients(val);
+    const cur=document.getElementById(inputId).value.trim();
+    if(cur!==val) return;
+    const matches=CLIENT_DB.filter(c=>c.name.includes(val));
+    if(!matches.length){box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>';return;}
+    const idLabel={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
+    box.innerHTML=matches.map((c,i)=>`<div class="suggest-item" onclick="pickTransferClient('${side}',${CLIENT_DB.indexOf(c)})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
+    box.style.display='block';
+  }, 400);
 }
 
 function pickTransferClient(side, idx) {
