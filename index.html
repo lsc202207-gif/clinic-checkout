@@ -322,7 +322,10 @@ body{padding-bottom:40px}
     </div>
     <div id="service-list"></div>
     <div id="svc-warnings"></div>
-    <button class="add-row-btn" onclick="addSvcRow()">＋ 新增施作項目</button>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:6px;flex-wrap:wrap">
+      <button class="add-row-btn" onclick="addSvcRow()" style="margin-top:0">＋ 新增施作項目</button>
+      <button class="add-row-btn" onclick="syncFromPurchase()" style="margin-top:0;color:var(--accent);font-weight:500">↓ 同步今日購買療程</button>
+    </div>
   </div>
 
   <div class="btn-row">
@@ -716,6 +719,37 @@ function addSvcRow(){
     <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
   document.getElementById('service-list').appendChild(d);
 }
+function syncFromPurchase(){
+  // 清空現有施作列
+  document.getElementById('service-list').innerHTML='';
+  // 把購買療程全部複製到施作
+  let copied=0;
+  document.querySelectorAll('#purchase-list .t-row-buy').forEach(r=>{
+    const name=r.querySelector('select')?.value;
+    if(!name)return;
+    const inputs=r.querySelectorAll('input[type=number]');
+    const qty=inputs[0]?.value||1;
+    const unit=r.querySelector('.unit-display')?.textContent||'';
+    // 建立施作列
+    const d=document.createElement('div');d.className='t-row t-row-svc';
+    d.innerHTML=`
+      <div class="row-field"><span class="row-label">施作內容</span><select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select></div>
+      <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="${qty}" min="1" max="9999" oninput="checkSvcWarnings()"></div>
+      <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">${unit}</div></div>
+      <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
+      <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
+    // 設定療程選項
+    const sel=d.querySelector('select');
+    sel.innerHTML=TH_OPTS;
+    sel.value=name;
+    document.getElementById('service-list').appendChild(d);
+    copied++;
+  });
+  checkSvcWarnings();
+  if(copied===0) showToast('請先填寫購買療程');
+  else showToast(`已同步 ${copied} 項療程`);
+}
+
 function onTherapyChange(sel,type){
   const name=sel.value;
   sel.closest(type==='buy'?'.t-row-buy':'.t-row-svc').querySelector('.unit-display').textContent=THERAPY_UNIT[name]||'—';
