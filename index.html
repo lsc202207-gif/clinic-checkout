@@ -505,8 +505,7 @@ body{padding-bottom:40px}
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8B2h-xFiHvI81mFL2tmpYmQ6VaDXXsB9khA1PepOWn5VCkZom8xztFJe2AjD79h8B/exec';
-const SHEET_ID = '1sZhAjiF78d7nWAs-BbqaYbpqSIcFyjRRvcXK_d5R14U';
-const GID_CLIENTS = 1484390223;
+
 const API_SECRET = '2026littlesectet1103';
 const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
@@ -534,50 +533,19 @@ let CLIENT_LIST = []; // 輕量版：只有 name, birth, phone, id, ref
 async function loadClients() {
   setSyncState('loading', '載入客戶名單…');
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_CLIENTS}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    CLIENT_LIST = parseClientCSV(text);
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getClientList&secret=${API_SECRET}`);
+    const json = await res.json();
+    if (json.status !== 'ok') throw new Error(json.message);
+    CLIENT_LIST = (json.clients || []).map(c => ({ ...c, packages:[], vip_remain:0, mem_remain:0, cashback_remain:0 }));
     CLIENT_DB = CLIENT_LIST;
     setSyncState('ok', `已連線 (${CLIENT_LIST.length} 位客戶)`);
   } catch(e) {
     setSyncState('err', '離線模式');
-    showToast('⚠ 無法載入客戶名單，請確認試算表分享設定為「知道連結的人可以檢視」');
+    showToast('⚠ 無法載入客戶名單');
   }
 }
 
-// 解析 CSV → 客戶陣列
-function parseClientCSV(csv) {
-  const lines = csv.trim().split('\n');
-  if (lines.length < 2) return [];
-  return lines.slice(1).map(line => {
-    const cols = parseCSVLine(line);
-    const name = (cols[0]||'').trim();
-    if (!name) return null;
-    return { name, birth: normBirth(cols[1]||''), phone: (cols[2]||'').trim(), id: normId(cols[3]||''), ref: (cols[4]||'').trim(), packages:[], vip_remain:0, mem_remain:0, cashback_remain:0 };
-  }).filter(Boolean);
-}
 
-function parseCSVLine(line) {
-  const result = [], re = /("(?:[^"]|"")*"|[^,]*),?/g;
-  let m;
-  while ((m = re.exec(line)) !== null) {
-    if (m.index === line.length) break;
-    let v = m[1];
-    if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1,-1).replace(/""/g,'"');
-    result.push(v);
-  }
-  return result;
-}
-
-function normBirth(s) {
-  s = s.trim();
-  // Sheets CSV 可能輸出 "1997/1/30" 或 "1997-01-30"
-  const m = s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-  if (!m) return s;
-  return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
-}
 
 // 搜尋客戶（輸入姓名後呼叫後端）
 // 本地搜尋（從已載入的 CLIENT_LIST 過濾，瞬間完成）
