@@ -505,6 +505,7 @@ body{padding-bottom:40px}
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8B2h-xFiHvI81mFL2tmpYmQ6VaDXXsB9khA1PepOWn5VCkZom8xztFJe2AjD79h8B/exec';
+const SHEET_ID = '1sZhAjiF78d7nWAs-BbqaYbpqSIcFyjRRvcXK_d5R14U';
 const API_SECRET = '2026littlesectet1103';
 const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
@@ -525,21 +526,90 @@ let CLIENT_DB=[], currentId='', selectedClient=null, suggestMatches=[];
 const payState={};
 
 // ── 載入客戶資料 ──
+// ── 預載客戶名單（只讀客戶資訊總表 CSV，速度極快）──
+// 搜尋時用本地過濾，選定客戶後才向 Apps Script 查詢該客戶的詳細資料
+let CLIENT_LIST = []; // 輕量版：只有 name, birth, phone, id, ref
+
 async function loadClients() {
-  // 改為搜尋時才查詢，不預載全部客戶
-  setSyncState('ok','已連線');
+  setSyncState('loading', '載入客戶名單…');
+  try {
+    // 直接讀 Google Sheets CSV（不經過 Apps Script，速度快 50 倍）
+    const gid = await getSheetGid('客戶資訊總表');
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('無法讀取');
+    const text = await res.text();
+    CLIENT_LIST = parseClientCSV(text);
+    CLIENT_DB = CLIENT_LIST; // 相容舊程式碼
+    setSyncState('ok', `已連線 (${CLIENT_LIST.length} 位客戶)`);
+  } catch(e) {
+    setSyncState('err', '離線模式');
+    showToast('⚠ 無法載入客戶名單');
+  }
+}
+
+// 取得分頁的 gid（透過 Apps Script 查一次，結果快取）
+let _gidCache = {};
+async function getSheetGid(sheetName) {
+  if (_gidCache[sheetName]) return _gidCache[sheetName];
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getGid&secret=${API_SECRET}&sheet=${encodeURIComponent(sheetName)}`);
+    const j = await res.json();
+    if (j.gid !== undefined) { _gidCache[sheetName] = j.gid; return j.gid; }
+  } catch(e) {}
+  return 0;
+}
+
+// 解析 CSV → 客戶陣列
+function parseClientCSV(csv) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
+  return lines.slice(1).map(line => {
+    const cols = parseCSVLine(line);
+    const name = (cols[0]||'').trim();
+    if (!name) return null;
+    return { name, birth: normBirth(cols[1]||''), phone: (cols[2]||'').trim(), id: normId(cols[3]||''), ref: (cols[4]||'').trim(), packages:[], vip_remain:0, mem_remain:0, cashback_remain:0 };
+  }).filter(Boolean);
+}
+
+function parseCSVLine(line) {
+  const result = [], re = /("(?:[^"]|"")*"|[^,]*),?/g;
+  let m;
+  while ((m = re.exec(line)) !== null) {
+    if (m.index === line.length) break;
+    let v = m[1];
+    if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1,-1).replace(/""/g,'"');
+    result.push(v);
+  }
+  return result;
+}
+
+function normBirth(s) {
+  s = s.trim();
+  // Sheets CSV 可能輸出 "1997/1/30" 或 "1997-01-30"
+  const m = s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+  if (!m) return s;
+  return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
 }
 
 // 搜尋客戶（輸入姓名後呼叫後端）
+// 本地搜尋（從已載入的 CLIENT_LIST 過濾，瞬間完成）
 async function searchClients(query) {
   if (!query || query.trim().length < 1) { CLIENT_DB = []; return; }
-  setSyncState('loading','搜尋中…');
+  CLIENT_DB = CLIENT_LIST.filter(c => c.name.includes(query.trim()));
+}
+
+// 選定客戶後，向 Apps Script 查詢該客戶的課程/儲值金/回饋金詳細資料
+async function fetchClientDetail(name, birth) {
   try {
-    const res = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(query.trim()));
+    const res = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(name));
     const json = await res.json();
-    if(json.status==='ok'){ CLIENT_DB=json.clients||[]; setSyncState('ok','已連線'); }
-    else throw new Error(json.message);
-  } catch(e){ setSyncState('err','搜尋失敗'); showToast('搜尋失敗，請確認網路連線'); }
+    if (json.status==='ok' && json.clients) {
+      const match = json.clients.find(c => c.name===name && c.birth===birth);
+      if (match) return match;
+    }
+  } catch(e) {}
+  return null;
 }
 
 function setSyncState(s,t){
@@ -592,7 +662,7 @@ function onNameInput(){
   }, 400);
 }
 
-function pickClient(i){
+async function pickClient(i){
   const c=suggestMatches[i]; selectedClient=c;
   document.getElementById('f-name').value=c.name;
   document.getElementById('f-phone').value=c.phone;
@@ -608,9 +678,25 @@ function pickClient(i){
     const sel=document.getElementById('f-ref');
     for(let o of sel.options){if(o.value===c.ref){sel.value=c.ref;break;}}
   }
+  // 先用輕量資料顯示基本狀態
   renderClientStatus(c);
   updateTopupCard();
   checkSvcWarnings();
+  // 背景載入詳細資料（課程/儲值金/回饋金），載入完成後自動更新畫面
+  if(c.id==='vip'||c.id==='mem'){
+    const statusBody=document.getElementById('client-status-body');
+    const loadingHint=document.createElement('div');
+    loadingHint.style.cssText='font-size:12px;color:var(--text3);margin-top:8px';
+    loadingHint.textContent='載入儲值金與課程資料…';
+    statusBody.appendChild(loadingHint);
+    const detail = await fetchClientDetail(c.name, c.birth);
+    if(detail && selectedClient && selectedClient.name===c.name){
+      selectedClient=detail;
+      renderClientStatus(detail);
+      updateTopupCard();
+      checkSvcWarnings();
+    }
+  }
 }
 
 document.addEventListener('click',e=>{ if(!e.target.closest('.name-wrap'))document.getElementById('suggest-box').style.display='none'; });
