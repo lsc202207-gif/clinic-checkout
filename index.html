@@ -506,6 +506,7 @@ body{padding-bottom:40px}
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8B2h-xFiHvI81mFL2tmpYmQ6VaDXXsB9khA1PepOWn5VCkZom8xztFJe2AjD79h8B/exec';
 const SHEET_ID = '1sZhAjiF78d7nWAs-BbqaYbpqSIcFyjRRvcXK_d5R14U';
+const GID_CLIENTS = 1484390223;
 const API_SECRET = '2026littlesectet1103';
 const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
@@ -533,31 +534,17 @@ let CLIENT_LIST = []; // 輕量版：只有 name, birth, phone, id, ref
 async function loadClients() {
   setSyncState('loading', '載入客戶名單…');
   try {
-    // 直接讀 Google Sheets CSV（不經過 Apps Script，速度快 50 倍）
-    const gid = await getSheetGid('客戶資訊總表');
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_CLIENTS}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error('無法讀取');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     CLIENT_LIST = parseClientCSV(text);
-    CLIENT_DB = CLIENT_LIST; // 相容舊程式碼
+    CLIENT_DB = CLIENT_LIST;
     setSyncState('ok', `已連線 (${CLIENT_LIST.length} 位客戶)`);
   } catch(e) {
     setSyncState('err', '離線模式');
-    showToast('⚠ 無法載入客戶名單');
+    showToast('⚠ 無法載入客戶名單，請確認試算表分享設定為「知道連結的人可以檢視」');
   }
-}
-
-// 取得分頁的 gid（透過 Apps Script 查一次，結果快取）
-let _gidCache = {};
-async function getSheetGid(sheetName) {
-  if (_gidCache[sheetName]) return _gidCache[sheetName];
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getGid&secret=${API_SECRET}&sheet=${encodeURIComponent(sheetName)}`);
-    const j = await res.json();
-    if (j.gid !== undefined) { _gidCache[sheetName] = j.gid; return j.gid; }
-  } catch(e) {}
-  return 0;
 }
 
 // 解析 CSV → 客戶陣列
