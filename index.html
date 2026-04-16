@@ -512,16 +512,73 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8B2h-xFiHvI81
 const API_SECRET = '2026littlesectet1103';
 const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
-const THERAPY_UNIT = {
-  '電波鳳凰900':'發','電波鳳凰碧眼':'發','電波鳳凰身體':'發','電波十倍大玉璽':'發','電波十倍900':'發','電波十倍眼周':'發','音波美國':'發','Z音波':'發',
-  'Onda pro':'區','除毛':'區',
-  '雷射皮秒':'堂','局部雷射皮秒':'堂','雷射皮秒蜂巢':'堂','局部雷射皮秒蜂巢':'堂','水光HA':'堂','美療清粉刺':'堂','疤痕修復術':'堂','芝潤水光':'堂','水飛梭':'堂','蝴蝶電波':'堂',
-  '填充精靈針':'罐','外泌體':'罐','保養品':'罐','法蜜齡慕斯':'罐',
-  '填充提奧希':'cc','填充喬雅登':'cc','填充德馬芙':'cc','填充Ellanse M':'cc','逆時針':'cc','填充膠原蛋白':'cc','填充晶亮瓷':'cc','降解酶':'cc','消疤針':'cc',
-  '埋線魚骨':'條','埋線隆鼻':'條','肉毒Botox':'u','肉毒奇蹟':'u','消脂針':'組',
-  '防曬點滴':'支','客製化點滴':'支','嫩膚點滴':'支','保肝點滴':'支','消脂點滴':'支','法蜜齡(支)':'支',
-  '六木顏面膜':'片','止痛針':'次','猛健樂2.5':'次','猛健樂5':'次','猛健樂7.5':'次','猛健樂10':'次',
+// 階層療程：{ 大類: { 細項: 單位 } } 或 { 大類: 單位 }（無細項）
+const THERAPY_TREE = {
+  '電波鳳凰900':  {'電波鳳凰900':'發'},
+  '電波鳳凰碧眼': {'電波鳳凰碧眼':'發'},
+  '電波鳳凰身體': {'電波鳳凰身體':'發'},
+  '電波十倍大玉璽':{'電波十倍大玉璽':'發'},
+  '電波十倍900':  {'電波十倍900':'發'},
+  '電波十倍眼周': {'電波十倍眼周':'發'},
+  '音波美國':     {'音波美國':'發'},
+  'Z音波':        {'Z音波':'發'},
+  'Onda pro': {
+    'Onda pro 身體15分鐘':'區',
+    'Onda pro 臉12分鐘':'區',
+    'Onda pro 臉6分鐘':'區',
+  },
+  '除毛': {
+    '除毛 腋下':'區','除毛 上手臂':'區','除毛 下手臂':'區',
+    '除毛 手指+手背':'區','除毛 腳背+腳趾':'區','除毛 小腿':'區',
+    '除毛 大腿':'區','除毛 全臉':'區','除毛 鬍子女':'區',
+    '除毛 鬍子男':'區','除毛 VIO':'區','除毛 VBO':'區',
+    '除毛 子母線':'區','除毛 半背':'區','除毛 全胸':'區',
+  },
+  '雷射皮秒':         {'雷射皮秒':'堂'},
+  '局部雷射皮秒':     {'局部雷射皮秒':'堂'},
+  '雷射皮秒蜂巢':     {'雷射皮秒蜂巢':'堂'},
+  '局部雷射皮秒蜂巢': {'局部雷射皮秒蜂巢':'堂'},
+  '水光HA':    {'水光HA':'堂'},
+  '美療清粉刺': {'美療清粉刺':'堂'},
+  '疤痕修復術': {'疤痕修復術':'堂'},
+  '芝潤水光':  {'芝潤水光':'堂'},
+  '水飛梭':    {'水飛梭':'堂'},
+  '蝴蝶電波':  {'蝴蝶電波':'堂'},
+  '填充精靈針': {'填充精靈針':'罐'},
+  '外泌體':    {'外泌體':'罐'},
+  '保養品':    {'保養品':'罐'},
+  '法蜜齡慕斯': {'法蜜齡慕斯':'罐'},
+  '填充提奧希':    {'填充提奧希':'cc'},
+  '填充喬雅登':    {'填充喬雅登':'cc'},
+  '填充德馬芙':    {'填充德馬芙':'cc'},
+  '填充Ellanse M': {'填充Ellanse M':'cc'},
+  '逆時針':        {'逆時針':'cc'},
+  '填充膠原蛋白':  {'填充膠原蛋白':'cc'},
+  '填充晶亮瓷':    {'填充晶亮瓷':'cc'},
+  '降解酶':        {'降解酶':'cc'},
+  '消疤針':        {'消疤針':'cc'},
+  '埋線魚骨': {'埋線魚骨':'條'},
+  '埋線隆鼻': {'埋線隆鼻':'條'},
+  '肉毒Botox': {'肉毒Botox':'u'},
+  '肉毒奇蹟':  {'肉毒奇蹟':'u'},
+  '消脂針':    {'消脂針':'組'},
+  '防曬點滴':   {'防曬點滴':'支'},
+  '客製化點滴': {'客製化點滴':'支'},
+  '嫩膚點滴':   {'嫩膚點滴':'支'},
+  '保肝點滴':   {'保肝點滴':'支'},
+  '消脂點滴':   {'消脂點滴':'支'},
+  '法蜜齡(支)': {'法蜜齡(支)':'支'},
+  '六木顏面膜': {'六木顏面膜':'片'},
+  '止痛針':    {'止痛針':'次'},
+  '猛健樂2.5': {'猛健樂2.5':'次'},
+  '猛健樂5':   {'猛健樂5':'次'},
+  '猛健樂7.5': {'猛健樂7.5':'次'},
+  '猛健樂10':  {'猛健樂10':'次'},
 };
+
+// 從 THERAPY_TREE 展開成舊版的 THERAPY_UNIT（供其他地方使用）
+const THERAPY_UNIT = {};
+Object.values(THERAPY_TREE).forEach(sub => Object.assign(THERAPY_UNIT, sub));;
 const THERAPY_LIST = Object.keys(THERAPY_UNIT);
 const TH_OPTS = '<option value="">請選擇療程</option>' + THERAPY_LIST.map(t=>`<option value="${t}">${t}</option>`).join('');
 
@@ -549,6 +606,25 @@ async function loadClients() {
 }
 
 
+
+// 生成療程二級選單 HTML（大類 optgroup + 細項 option）
+function buildThOpts() {
+  let html = '<option value="">請選擇療程</option>';
+  Object.entries(THERAPY_TREE).forEach(([cat, subs]) => {
+    const subEntries = Object.entries(subs);
+    if (subEntries.length === 1 && subEntries[0][0] === cat) {
+      // 無細項：直接一個 option
+      html += `<option value="${cat}">${cat}</option>`;
+    } else {
+      // 有細項：用 optgroup
+      html += `<optgroup label="${cat}">`;
+      subEntries.forEach(([name]) => { html += `<option value="${name}">${name}</option>`; });
+      html += '</optgroup>';
+    }
+  });
+  return html;
+}
+const TH_OPTS = buildThOpts();
 
 // 搜尋客戶（輸入姓名後呼叫後端）
 // 本地搜尋（從已載入的 CLIENT_LIST 過濾，瞬間完成）
@@ -904,6 +980,12 @@ function togglePay(m){
   if(payState[m]){delete payState[m];chip.classList.remove('on');}
   else{payState[m]={amount:'',bank:''};chip.classList.add('on');}
   renderPayEntries();
+  // 若只有一種付款方式，自動填入應付總額
+  const keys=Object.keys(payState);
+  if(keys.length===1){
+    const total=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
+    if(total>0){ payState[keys[0]].amount=String(total); renderPayEntries(); }
+  }
 }
 function renderPayEntries(){
   let html='';
