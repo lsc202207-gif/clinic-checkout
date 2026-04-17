@@ -864,20 +864,24 @@ async function pickClient(i){
   renderClientStatus(c);
   updateTopupCard();
   checkSvcWarnings();
-  // 背景載入詳細資料（課程/儲值金/回饋金），載入完成後自動更新畫面
-  if(c.id==='vip'||c.id==='mem'){
-    const statusBody=document.getElementById('client-status-body');
-    const loadingHint=document.createElement('div');
-    loadingHint.style.cssText='font-size:12px;color:var(--text3);margin-top:8px';
-    loadingHint.textContent='載入儲值金與課程資料…';
-    statusBody.appendChild(loadingHint);
-    const detail = await fetchClientDetail(c.name, c.birth);
-    if(detail && selectedClient && selectedClient.name===c.name){
-      selectedClient=detail;
-      renderClientStatus(detail);
-      updateTopupCard();
-      checkSvcWarnings();
-    }
+  // 背景載入詳細資料（所有客戶都載入，因為任何身分都可能有課程記錄）
+  const statusBody = document.getElementById('client-status-body');
+  if(statusBody){
+    const hint = document.createElement('div');
+    hint.id = 'detail-loading-hint';
+    hint.style.cssText = 'font-size:12px;color:var(--text3);margin-top:6px';
+    hint.textContent = '載入課程與餘額資料…';
+    statusBody.appendChild(hint);
+  }
+  const detail = await fetchClientDetail(c.name, c.birth);
+  if(detail && selectedClient && selectedClient.name===c.name){
+    selectedClient = detail;
+    renderClientStatus(detail);
+    updateTopupCard();
+    checkSvcWarnings();
+  } else {
+    const hint = document.getElementById('detail-loading-hint');
+    if(hint) hint.remove();
   }
 }
 
@@ -902,8 +906,10 @@ function renderClientStatus(c){
     html+=`<div class="credit-box cashback" style="margin-top:8px"><div class="credit-label">回饋金餘額</div><div class="credit-amount">NT$ ${cbHistory.toLocaleString()}</div></div>`;
   }
   document.getElementById('client-status-body').innerHTML=html;
-  // 背景載入訂金紀錄
-  loadClientDeposits(c);
+  // 背景載入訂金紀錄（只在詳細資料載入完成後才查，避免重複）
+  if(c.packages && c.packages.length >= 0 && (c.vip_remain !== undefined || c.mem_remain !== undefined)){
+    loadClientDeposits(c);
+  }
 }
 
 async function loadClientDeposits(c) {
