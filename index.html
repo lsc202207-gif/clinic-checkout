@@ -579,8 +579,7 @@ const THERAPY_TREE = {
 // 從 THERAPY_TREE 展開成舊版的 THERAPY_UNIT（供其他地方使用）
 const THERAPY_UNIT = {};
 Object.values(THERAPY_TREE).forEach(sub => Object.assign(THERAPY_UNIT, sub));;
-const THERAPY_LIST = Object.keys(THERAPY_UNIT);
-const TH_OPTS = '<option value="">請選擇療程</option>' + THERAPY_LIST.map(t=>`<option value="${t}">${t}</option>`).join('');
+
 
 let CLIENT_DB=[], currentId='', selectedClient=null, suggestMatches=[];
 const payState={};
@@ -598,7 +597,12 @@ async function loadClients() {
     if (json.status !== 'ok') throw new Error(json.message);
     CLIENT_LIST = (json.clients || []).map(c => ({ ...c, packages:[], vip_remain:0, mem_remain:0, cashback_remain:0 }));
     CLIENT_DB = CLIENT_LIST;
-    setSyncState('ok', `已連線 (${CLIENT_LIST.length} 位客戶)`);
+    if(CLIENT_LIST.length === 0){
+      setSyncState('err', '客戶名單為空');
+      showToast('⚠ 客戶名單為空，請確認 Apps Script 已部署最新版本');
+    } else {
+      setSyncState('ok', `已連線 (${CLIENT_LIST.length} 位客戶)`);
+    }
   } catch(e) {
     setSyncState('err', '離線模式');
     showToast('⚠ 無法載入客戶名單');
