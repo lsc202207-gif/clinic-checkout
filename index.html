@@ -734,12 +734,13 @@ async function confirmSign() {
 }
 
 async function loadClients() {
-  setSyncState('loading', '載入客戶名單…');
+  setSyncState('loading', '載入客戶資料…');
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getClientList&secret=${API_SECRET}`);
     const json = await res.json();
     if (json.status !== 'ok') throw new Error(json.message);
-    CLIENT_LIST = (json.clients || []).map(c => ({ ...c, packages:[], vip_remain:0, mem_remain:0, cashback_remain:0 }));
+    // 完整資料（含課程/儲值金/回饋金），選客戶後直接用，不需再呼叫 API
+    CLIENT_LIST = json.clients || [];
     CLIENT_DB = CLIENT_LIST;
     if(CLIENT_LIST.length === 0){
       setSyncState('err', '客戶名單為空');
@@ -870,25 +871,7 @@ async function pickClient(i){
   renderClientStatus(c);
   updateTopupCard();
   checkSvcWarnings();
-  // 背景載入詳細資料（所有客戶都載入，因為任何身分都可能有課程記錄）
-  const statusBody = document.getElementById('client-status-body');
-  if(statusBody){
-    const hint = document.createElement('div');
-    hint.id = 'detail-loading-hint';
-    hint.style.cssText = 'font-size:12px;color:var(--text3);margin-top:6px';
-    hint.textContent = '載入課程與餘額資料…';
-    statusBody.appendChild(hint);
-  }
-  const detail = await fetchClientDetail(c.name, c.birth);
-  if(detail && selectedClient && selectedClient.name===c.name){
-    selectedClient = detail;
-    renderClientStatus(detail);
-    updateTopupCard();
-    checkSvcWarnings();
-  } else {
-    const hint = document.getElementById('detail-loading-hint');
-    if(hint) hint.remove();
-  }
+  // CLIENT_LIST 已包含完整資料，直接使用，無需再呼叫 API
 }
 
 document.addEventListener('click',e=>{ if(!e.target.closest('.name-wrap'))document.getElementById('suggest-box').style.display='none'; });
@@ -912,10 +895,8 @@ function renderClientStatus(c){
     html+=`<div class="credit-box cashback" style="margin-top:8px"><div class="credit-label">回饋金餘額</div><div class="credit-amount">NT$ ${cbHistory.toLocaleString()}</div></div>`;
   }
   document.getElementById('client-status-body').innerHTML=html;
-  // 背景載入訂金紀錄（只在詳細資料載入完成後才查，避免重複）
-  if(c.packages && c.packages.length >= 0 && (c.vip_remain !== undefined || c.mem_remain !== undefined)){
-    loadClientDeposits(c);
-  }
+  // 背景載入訂金紀錄
+  loadClientDeposits(c);
 }
 
 async function loadClientDeposits(c) {
@@ -1396,7 +1377,7 @@ function onTransferSearch(side){
   }, 400);
 }
 
-async function pickTransferClient(side, idx) {
+function pickTransferClient(side, idx) {
   const c = CLIENT_DB[idx];
   if(side==='from'){
     trFromClient=c;
@@ -1404,29 +1385,15 @@ async function pickTransferClient(side, idx) {
     document.getElementById('tr-from-birth').value=c.birth;
     document.getElementById('tr-from-phone').value=c.phone;
     document.getElementById('tr-from-suggest').style.display='none';
-    // 先顯示「載入中」
-    const pkgDiv=document.getElementById('tr-from-packages');
-    const pkgList=document.getElementById('tr-from-pkg-list');
-    pkgList.innerHTML='<div style="font-size:13px;color:var(--text3)">載入課程資料…</div>';
-    pkgDiv.style.display='block';
-    document.getElementById('tr-therapy').innerHTML='<option value="">載入中…</option>';
-    // 背景載入詳細資料
-    const detail = await fetchClientDetail(c.name, c.birth);
-    if(detail && trFromClient && trFromClient.name===c.name){
-      trFromClient=detail;
-      renderFromPackages(detail);
-    } else {
-      pkgList.innerHTML='<div style="font-size:13px;color:var(--text3)">無可轉讓課程</div>';
-    }
+    // CLIENT_LIST 已包含完整資料，直接使用
+    renderFromPackages(c);
   } else {
     trToClient=c;
     document.getElementById('tr-to-name').value=c.name;
     document.getElementById('tr-to-birth').value=c.birth;
     document.getElementById('tr-to-phone').value=c.phone;
     document.getElementById('tr-to-suggest').style.display='none';
-    // 背景載入受讓人詳細資料（供轉讓後更新用）
-    const detail = await fetchClientDetail(c.name, c.birth);
-    if(detail && trToClient && trToClient.name===c.name) trToClient=detail;
+
   }
 }
 
