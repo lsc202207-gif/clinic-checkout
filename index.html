@@ -446,7 +446,7 @@ body{padding-bottom:40px}
   <div class="btn-row">
     <button class="btn-secondary" onclick="goTab('payment',document.querySelectorAll('.tab-btn')[1])">← 返回修改</button>
   </div>
-  <button class="btn-submit" id="submit-btn" onclick="submitOrder()">確認結帳並寫入 Google Sheets</button>
+  <button class="btn-submit" id="submit-btn" onclick="openSignModal()">確認結帳並寫入 Google Sheets</button>
 </div>
 
 
@@ -509,6 +509,31 @@ body{padding-bottom:40px}
   <button class="btn-submit" id="tr-submit-btn" onclick="submitTransfer()">確認轉讓並寫入記錄</button>
 </div>
 
+
+<!-- ══════ 簽名彈窗 ══════ -->
+<div id="sign-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--radius);width:100%;max-width:560px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+    <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px">請確認並簽名</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">請客戶確認以下資訊後，於下方空白處簽名</div>
+
+    <!-- 確認摘要 -->
+    <div id="sign-summary" style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:13px;line-height:1.7;max-height:200px;overflow-y:auto"></div>
+
+    <!-- 簽名區 -->
+    <div style="font-size:12px;color:var(--text3);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+      <span>客戶簽名</span>
+      <button onclick="clearSign()" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;padding:2px 6px">清除重簽</button>
+    </div>
+    <canvas id="sign-canvas" style="width:100%;height:160px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);cursor:crosshair;touch-action:none;background:#fff"></canvas>
+    <div id="sign-hint" style="font-size:12px;color:var(--text3);margin-top:4px">↑ 請在此處以手指或滑鼠簽名</div>
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="closeSignModal()" style="flex:1;padding:12px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);color:var(--text2);font-size:14px;cursor:pointer">取消</button>
+      <button onclick="confirmSign()" id="sign-confirm-btn" style="flex:2;padding:12px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer">確認簽名並送出</button>
+    </div>
+  </div>
+</div>
+
 <div class="success-overlay" id="success-overlay">
   <div class="success-icon">✓</div>
   <div class="success-title">結帳成功！</div>
@@ -530,13 +555,13 @@ const THERAPY_TREE = {
     '鳳凰碧眼':'發',
     '鳳凰身體':'發',
   },
-   '電波十蓓': {
+  '電波十倍': {
     '大玉璽':'發',
     '十倍900':'發',
     '十倍眼周':'發',
   },
-  '音波美國':     {'音波美國':'發'},
-  'Z音波':        {'Z音波':'發'},
+  '音波美國': {'音波美國':'發'},
+  'Z音波':    {'Z音波':'發'},
   'Onda pro': {
     'Onda pro 身體15分鐘':'區',
     'Onda pro 臉12分鐘':'區',
@@ -571,10 +596,9 @@ const THERAPY_TREE = {
     '填充晶亮瓷':'cc',
   },
   '法蜜齡慕斯': {'法蜜齡慕斯':'罐'},
-  '法蜜齡(支)': {'法蜜齡(支)':'支'},
-  '逆時針':        {'逆時針':'cc'},
-  '降解酶':        {'降解酶':'cc'},
-  '消疤針':        {'消疤針':'cc'},
+  '逆時針': {'逆時針':'cc'},
+  '降解酶': {'降解酶':'cc'},
+  '消疤針': {'消疤針':'cc'},
   '埋線魚骨': {'埋線魚骨':'條'},
   '埋線隆鼻': {'埋線隆鼻':'條'},
   '肉毒Botox': {'肉毒Botox':'u'},
@@ -587,6 +611,7 @@ const THERAPY_TREE = {
     '消脂點滴':'支',
     '客製化點滴':'支',
   },
+  '法蜜齡(支)': {'法蜜齡(支)':'支'},
   '六木顏面膜': {'六木顏面膜':'片'},
   '止痛針':    {'止痛針':'次'},
   '猛健樂': {
@@ -609,6 +634,104 @@ const payState={};
 // ── 預載客戶名單（只讀客戶資訊總表 CSV，速度極快）──
 // 搜尋時用本地過濾，選定客戶後才向 Apps Script 查詢該客戶的詳細資料
 let CLIENT_LIST = []; // 輕量版：只有 name, birth, phone, id, ref
+
+
+// ════════════ 電子簽名 ════════════
+let signCanvas, signCtx, signDrawing = false, signHasMark = false;
+
+function openSignModal() {
+  // 建立確認摘要
+  const name = document.getElementById('f-name').value;
+  const total = document.getElementById('sum-total')?.textContent || '—';
+  const buys = [], svcs = [];
+  document.querySelectorAll('#purchase-list .t-row-buy').forEach(r => {
+    const n = r.querySelector('select')?.value; if(n) buys.push(n);
+  });
+  document.querySelectorAll('#service-list .t-row-svc').forEach(r => {
+    const n = r.querySelector('select')?.value; if(n) svcs.push(n);
+  });
+  const payStatus = currentPayStatus === 'deposit' ? '【訂金】' : currentPayStatus === 'balance' ? '【補尾款】' : '';
+  let summary = `<strong>${name}</strong>　${payStatus}應付 ${total}<br>`;
+  if (buys.length) summary += `<br>購買：${buys.join('、')}`;
+  if (svcs.length) summary += `<br>施作：${svcs.join('、')}`;
+  const note = document.getElementById('f-note').value;
+  if (note) summary += `<br>備註：${note}`;
+  document.getElementById('sign-summary').innerHTML = summary;
+
+  // 顯示彈窗
+  const modal = document.getElementById('sign-modal');
+  modal.style.display = 'flex';
+
+  // 初始化 Canvas
+  signCanvas = document.getElementById('sign-canvas');
+  // 設定實際解析度（對應 CSS 顯示尺寸）
+  const rect = signCanvas.getBoundingClientRect();
+  signCanvas.width  = rect.width  * window.devicePixelRatio;
+  signCanvas.height = rect.height * window.devicePixelRatio;
+  signCtx = signCanvas.getContext('2d');
+  signCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  signCtx.strokeStyle = '#1a1a2e';
+  signCtx.lineWidth = 2.5;
+  signCtx.lineCap = 'round';
+  signCtx.lineJoin = 'round';
+  signDrawing = false;
+  signHasMark = false;
+
+  // 綁定事件
+  signCanvas.onpointerdown = signStart;
+  signCanvas.onpointermove = signMove;
+  signCanvas.onpointerup   = signEnd;
+  signCanvas.onpointerleave = signEnd;
+}
+
+function getSignPos(e) {
+  const rect = signCanvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function signStart(e) {
+  e.preventDefault();
+  signDrawing = true; signHasMark = true;
+  signCtx.beginPath();
+  const p = getSignPos(e);
+  signCtx.moveTo(p.x, p.y);
+  document.getElementById('sign-hint').style.display = 'none';
+}
+
+function signMove(e) {
+  if (!signDrawing) return;
+  e.preventDefault();
+  const p = getSignPos(e);
+  signCtx.lineTo(p.x, p.y);
+  signCtx.stroke();
+  signCtx.beginPath();
+  signCtx.moveTo(p.x, p.y);
+}
+
+function signEnd(e) { signDrawing = false; }
+
+function clearSign() {
+  if (signCtx && signCanvas) {
+    signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height);
+    signHasMark = false;
+    document.getElementById('sign-hint').style.display = 'block';
+  }
+}
+
+function closeSignModal() {
+  document.getElementById('sign-modal').style.display = 'none';
+}
+
+async function confirmSign() {
+  if (!signHasMark) { showToast('請先完成簽名'); return; }
+  const btn = document.getElementById('sign-confirm-btn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  // 取得簽名 Base64
+  window._signatureData = signCanvas.toDataURL('image/png');
+  closeSignModal();
+  await submitOrder();
+  btn.disabled = false; btn.textContent = '確認簽名並送出';
+}
 
 async function loadClients() {
   setSyncState('loading', '載入客戶名單…');
@@ -779,6 +902,27 @@ function renderClientStatus(c){
     html+=`<div class="credit-box cashback" style="margin-top:8px"><div class="credit-label">回饋金餘額</div><div class="credit-amount">NT$ ${cbHistory.toLocaleString()}</div></div>`;
   }
   document.getElementById('client-status-body').innerHTML=html;
+  // 背景載入訂金紀錄
+  loadClientDeposits(c);
+}
+
+async function loadClientDeposits(c) {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getDeposits&secret=${API_SECRET}&name=${encodeURIComponent(c.name)}`);
+    const json = await res.json();
+    if(json.status!=='ok'||!json.deposits||!json.deposits.length) return;
+    const body = document.getElementById('client-status-body');
+    if(!body) return;
+    let dhtml = `<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--warn,#d97706);margin-bottom:6px">⚠ 尚有未結清訂金</div>`;
+    json.deposits.forEach(d=>{
+      dhtml += `<div style="font-size:12px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border)">
+        ${d.date} &nbsp;│&nbsp; <strong>NT$ ${Number(d.total).toLocaleString()}</strong> &nbsp;│&nbsp; ${d.note}
+      </div>`;
+    });
+    dhtml += '</div>';
+    body.insertAdjacentHTML('beforeend', dhtml);
+  } catch(e) {}
 }
 
 // ── 當日儲值 ──
@@ -1167,6 +1311,7 @@ async function submitOrder(){
     cashbackRemainBefore: cbHistory,
     cashbackEarned: cbThis,
     payStatus:currentPayStatus,
+    signature: window._signatureData || '',
     note:(()=>{
       const n=document.getElementById('f-note').value||'';
       if(currentPayStatus==='deposit') return '[訂金] '+n;
@@ -1179,7 +1324,7 @@ async function submitOrder(){
   try{
     const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(payload)});
     const json=await res.json();
-    if(json.status==='ok'){setSyncState('ok','已連線');document.getElementById('success-order-id').textContent='訂單編號：'+json.orderId;document.getElementById('success-overlay').style.display='flex';}
+    if(json.status==='ok'){setSyncState('ok','已連線');document.getElementById('success-order-id').textContent='訂單編號：'+json.orderId;document.getElementById('success-overlay').style.display='flex'; window._signatureData='';}
     else throw new Error(json.message);
   }catch(err){setSyncState('err','傳送失敗');showToast('⚠ 傳送失敗：'+err.message);sb.disabled=false;sb.textContent='確認結帳並寫入 Google Sheets';}
 }
