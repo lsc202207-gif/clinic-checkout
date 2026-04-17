@@ -376,6 +376,17 @@ body{padding-bottom:40px}
   </div>
 
   <div class="card">
+    <div class="field" style="margin-bottom:12px">
+      <label>付款狀態</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <div class="pay-chip on" id="status-paid" onclick="setPayStatus('paid')">全額付清</div>
+        <div class="pay-chip" id="status-deposit" onclick="setPayStatus('deposit')">訂金（尚有尾款）</div>
+        <div class="pay-chip" id="status-balance" onclick="setPayStatus('balance')">補尾款</div>
+      </div>
+      <div id="deposit-note" style="display:none;margin-top:10px;padding:10px 12px;background:var(--warn-bg);border-radius:var(--radius-sm);font-size:13px;color:var(--warn)">
+        ⚠ 此筆為訂金，請在備註填寫尾款金額與預計收款日期
+      </div>
+    </div>
     <div class="field"><label>備註</label>
       <textarea id="f-note" rows="3" placeholder="特殊需求或注意事項..." style="resize:vertical"></textarea>
     </div>
@@ -514,14 +525,18 @@ const CASHBACK_RATE = 0.02; // 會員 2% 回饋
 
 // 階層療程：{ 大類: { 細項: 單位 } } 或 { 大類: 單位 }（無細項）
 const THERAPY_TREE = {
-  '電波鳳凰900':  {'電波鳳凰900':'發'},
-  '電波鳳凰碧眼': {'電波鳳凰碧眼':'發'},
-  '電波鳳凰身體': {'電波鳳凰身體':'發'},
-  '電波十倍大玉璽':{'電波十倍大玉璽':'發'},
-  '電波十倍900':  {'電波十倍900':'發'},
-  '電波十倍眼周': {'電波十倍眼周':'發'},
-  '音波美國':     {'音波美國':'發'},
-  'Z音波':        {'Z音波':'發'},
+  '電波鳳凰': {
+    '鳳凰900':'發',
+    '鳳凰碧眼':'發',
+    '鳳凰身體':'發',
+  },
+  '電波十倍': {
+    '大玉璽':'發',
+    '十倍900':'發',
+    '十倍眼周':'發',
+  },
+  '音波美國': {'音波美國':'發'},
+  'Z音波':    {'Z音波':'發'},
   'Onda pro': {
     'Onda pro 身體15分鐘':'區',
     'Onda pro 臉12分鐘':'區',
@@ -544,36 +559,42 @@ const THERAPY_TREE = {
   '芝潤水光':  {'芝潤水光':'堂'},
   '水飛梭':    {'水飛梭':'堂'},
   '蝴蝶電波':  {'蝴蝶電波':'堂'},
-  '填充精靈針': {'填充精靈針':'罐'},
   '外泌體':    {'外泌體':'罐'},
   '保養品':    {'保養品':'罐'},
+  '填充': {
+    '填充精靈針':'罐',
+    '填充提奧希':'cc',
+    '填充喬雅登':'cc',
+    '填充德馬芙':'cc',
+    '填充Ellanse M':'cc',
+    '填充膠原蛋白':'cc',
+    '填充晶亮瓷':'cc',
+  },
   '法蜜齡慕斯': {'法蜜齡慕斯':'罐'},
-  '填充提奧希':    {'填充提奧希':'cc'},
-  '填充喬雅登':    {'填充喬雅登':'cc'},
-  '填充德馬芙':    {'填充德馬芙':'cc'},
-  '填充Ellanse M': {'填充Ellanse M':'cc'},
-  '逆時針':        {'逆時針':'cc'},
-  '填充膠原蛋白':  {'填充膠原蛋白':'cc'},
-  '填充晶亮瓷':    {'填充晶亮瓷':'cc'},
-  '降解酶':        {'降解酶':'cc'},
-  '消疤針':        {'消疤針':'cc'},
+  '逆時針': {'逆時針':'cc'},
+  '降解酶': {'降解酶':'cc'},
+  '消疤針': {'消疤針':'cc'},
   '埋線魚骨': {'埋線魚骨':'條'},
   '埋線隆鼻': {'埋線隆鼻':'條'},
   '肉毒Botox': {'肉毒Botox':'u'},
   '肉毒奇蹟':  {'肉毒奇蹟':'u'},
   '消脂針':    {'消脂針':'組'},
-  '防曬點滴':   {'防曬點滴':'支'},
-  '客製化點滴': {'客製化點滴':'支'},
-  '嫩膚點滴':   {'嫩膚點滴':'支'},
-  '保肝點滴':   {'保肝點滴':'支'},
-  '消脂點滴':   {'消脂點滴':'支'},
+  '點滴': {
+    '防曬點滴':'支',
+    '嫩膚點滴':'支',
+    '保肝點滴':'支',
+    '消脂點滴':'支',
+    '客製化點滴':'支',
+  },
   '法蜜齡(支)': {'法蜜齡(支)':'支'},
   '六木顏面膜': {'六木顏面膜':'片'},
   '止痛針':    {'止痛針':'次'},
-  '猛健樂2.5': {'猛健樂2.5':'次'},
-  '猛健樂5':   {'猛健樂5':'次'},
-  '猛健樂7.5': {'猛健樂7.5':'次'},
-  '猛健樂10':  {'猛健樂10':'次'},
+  '猛健樂': {
+    '猛健樂2.5':'次',
+    '猛健樂5':'次',
+    '猛健樂7.5':'次',
+    '猛健樂10':'次',
+  },
 };
 
 // 從 THERAPY_TREE 展開成舊版的 THERAPY_UNIT（供其他地方使用）
@@ -991,6 +1012,17 @@ function togglePay(m){
     if(total>0){ payState[keys[0]].amount=String(total); renderPayEntries(); }
   }
 }
+let currentPayStatus = 'paid'; // 'paid' | 'deposit' | 'balance'
+
+function setPayStatus(s){
+  currentPayStatus = s;
+  ['paid','deposit','balance'].forEach(v=>{
+    document.getElementById('status-'+v).className = 'pay-chip' + (v===s?' on':'');
+  });
+  const note = document.getElementById('deposit-note');
+  if(note) note.style.display = (s==='deposit') ? 'block' : 'none';
+}
+
 function renderPayEntries(){
   let html='';
   Object.keys(payState).forEach(m=>{
@@ -1134,7 +1166,13 @@ async function submitOrder(){
     cashbackDeductAmt:  cbd,
     cashbackRemainBefore: cbHistory,
     cashbackEarned: cbThis,
-    note:document.getElementById('f-note').value,
+    payStatus:currentPayStatus,
+    note:(()=>{
+      const n=document.getElementById('f-note').value||'';
+      if(currentPayStatus==='deposit') return '[訂金] '+n;
+      if(currentPayStatus==='balance') return '[補尾款] '+n;
+      return n;
+    })(),
     purchaseItems,serviceItems,remainingPackages:calcRemaining(),
     updateClientInfo: !!(document.getElementById('f-ref').value || currentId)
   };
@@ -1167,6 +1205,7 @@ function resetAll(){
   ['vip','mem','biz'].forEach(t=>document.getElementById('idchip-'+t).className='id-chip');
   initRows();calcTotal();
   goTab('order',document.querySelectorAll('.tab-btn')[0]);
+  setPayStatus('paid');
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
