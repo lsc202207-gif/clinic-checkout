@@ -1029,7 +1029,7 @@ function renderPayEntries(){
     html+=`<div class="pay-entry"><div class="pay-entry-row"><span class="pay-name">${m}</span><input class="pay-input" type="number" placeholder="金額" value="${payState[m].amount}" oninput="payState['${m}'].amount=this.value;updateDiffBar()"><span style="font-size:13px;color:var(--text2)">元</span></div>`;
     if(m==='轉帳'){
       html+=`<div class="bank-btns">`;
-      ['合庫','台新','中信','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
+      ['合庫','台新','中信','土地','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
       html+=`</div>`;
     }
     if(m==='無卡分期'){
