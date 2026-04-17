@@ -782,13 +782,19 @@ async function searchClients(query) {
 }
 
 // 選定客戶後，向 Apps Script 查詢該客戶的課程/儲值金/回饋金詳細資料
+// 用 getClientDetail（精確查一人，比 searchClients 快）
 async function fetchClientDetail(name, birth) {
   try {
-    const res = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(name));
+    const url = APPS_SCRIPT_URL+'?action=getClientDetail&secret='+API_SECRET
+      +'&name='+encodeURIComponent(name)+'&birth='+encodeURIComponent(birth);
+    const res = await fetch(url);
     const json = await res.json();
-    if (json.status==='ok' && json.clients) {
-      const match = json.clients.find(c => c.name===name && c.birth===birth);
-      if (match) return match;
+    if (json.status==='ok' && json.client) return json.client;
+    // fallback: 用 searchClients
+    const res2 = await fetch(APPS_SCRIPT_URL+'?action=searchClients&secret='+API_SECRET+'&q='+encodeURIComponent(name));
+    const json2 = await res2.json();
+    if (json2.status==='ok' && json2.clients) {
+      return json2.clients.find(c => c.name===name && c.birth===birth) || null;
     }
   } catch(e) {}
   return null;
@@ -1390,7 +1396,7 @@ function onTransferSearch(side){
   }, 400);
 }
 
-function pickTransferClient(side, idx) {
+async function pickTransferClient(side, idx) {
   const c = CLIENT_DB[idx];
   if(side==='from'){
     trFromClient=c;
@@ -1398,13 +1404,29 @@ function pickTransferClient(side, idx) {
     document.getElementById('tr-from-birth').value=c.birth;
     document.getElementById('tr-from-phone').value=c.phone;
     document.getElementById('tr-from-suggest').style.display='none';
-    renderFromPackages(c);
+    // 先顯示「載入中」
+    const pkgDiv=document.getElementById('tr-from-packages');
+    const pkgList=document.getElementById('tr-from-pkg-list');
+    pkgList.innerHTML='<div style="font-size:13px;color:var(--text3)">載入課程資料…</div>';
+    pkgDiv.style.display='block';
+    document.getElementById('tr-therapy').innerHTML='<option value="">載入中…</option>';
+    // 背景載入詳細資料
+    const detail = await fetchClientDetail(c.name, c.birth);
+    if(detail && trFromClient && trFromClient.name===c.name){
+      trFromClient=detail;
+      renderFromPackages(detail);
+    } else {
+      pkgList.innerHTML='<div style="font-size:13px;color:var(--text3)">無可轉讓課程</div>';
+    }
   } else {
     trToClient=c;
     document.getElementById('tr-to-name').value=c.name;
     document.getElementById('tr-to-birth').value=c.birth;
     document.getElementById('tr-to-phone').value=c.phone;
     document.getElementById('tr-to-suggest').style.display='none';
+    // 背景載入受讓人詳細資料（供轉讓後更新用）
+    const detail = await fetchClientDetail(c.name, c.birth);
+    if(detail && trToClient && trToClient.name===c.name) trToClient=detail;
   }
 }
 
