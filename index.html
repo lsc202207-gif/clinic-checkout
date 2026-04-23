@@ -452,11 +452,9 @@ body{padding-bottom:40px}
 
 <!-- ══════ TAB 4 課程轉讓 ══════ -->
 <div class="tab-content" id="tab-transfer">
+  <!-- 轉讓人 -->
   <div class="card">
-    <div class="card-title">課程轉讓</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">將客戶尚未使用的課程轉讓給另一位客戶，系統自動更新雙方餘額並記錄轉讓紀錄。</div>
-
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">轉讓人（課程來源）</div>
+    <div class="card-title">轉讓人（課程來源）</div>
     <div class="grid3" style="margin-bottom:10px">
       <div class="field" style="position:relative">
         <label>客戶姓名</label>
@@ -466,46 +464,18 @@ body{padding-bottom:40px}
       <div class="field"><label>生日（核對）</label><input id="tr-from-birth" type="date" readonly style="background:var(--surface2)"></div>
       <div class="field"><label>電話</label><input id="tr-from-phone" type="text" readonly style="background:var(--surface2)"></div>
     </div>
-    <div id="tr-from-packages" style="display:none;margin-bottom:14px">
+    <div id="tr-from-packages" style="display:none">
       <div style="font-size:12px;color:var(--text3);margin-bottom:6px">可轉讓課程</div>
       <div id="tr-from-pkg-list"></div>
     </div>
-
-    <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">受讓人（課程接收）</div>
-      <div class="grid3">
-        <div class="field" style="position:relative">
-          <label>客戶姓名</label>
-          <input id="tr-to-name" type="text" placeholder="輸入姓名搜尋" oninput="onTransferSearch('to')" autocomplete="off">
-          <div class="suggest-box" id="tr-to-suggest" style="display:none"></div>
-        </div>
-        <div class="field"><label>生日（核對）</label><input id="tr-to-birth" type="date" readonly style="background:var(--surface2)"></div>
-        <div class="field"><label>電話</label><input id="tr-to-phone" type="text" readonly style="background:var(--surface2)"></div>
-      </div>
-    </div>
-
-    <div style="border-top:1px solid var(--border);padding-top:14px">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px">轉讓設定</div>
-      <div class="grid3">
-        <div class="field">
-          <label>療程名稱</label>
-          <select id="tr-therapy" onchange="updateTransferHint()"><option value="">請先選擇轉讓人</option></select>
-        </div>
-        <div class="field">
-          <label>轉讓數量</label>
-          <input id="tr-qty" type="number" min="1" value="1">
-        </div>
-        <div class="field">
-          <label>單位</label>
-          <input id="tr-unit" type="text" readonly style="background:var(--surface2)">
-        </div>
-      </div>
-      <div id="tr-remain-hint" style="font-size:13px;color:var(--text2);margin-top:8px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);display:none"></div>
-    </div>
-
-    <div id="tr-error" style="display:none;margin-top:12px" class="warn-item err"></div>
-    <div id="tr-success" style="display:none;margin-top:12px;background:var(--ok-bg);color:var(--ok);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:500"></div>
   </div>
+
+  <!-- 受讓列（動態產生） -->
+  <div id="tr-rows-container"></div>
+  <button class="add-row-btn" onclick="addTransferRow()" style="margin-bottom:12px">＋ 新增一筆轉讓</button>
+
+  <div id="tr-error" style="display:none;margin-bottom:12px" class="warn-item err"></div>
+  <div id="tr-success" style="display:none;margin-bottom:12px;background:var(--ok-bg);color:var(--ok);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:500"></div>
   <button class="btn-submit" id="tr-submit-btn" onclick="submitTransfer()">確認轉讓並寫入記錄</button>
 </div>
 
@@ -1367,132 +1337,202 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ════════════════════════════════
 //  課程轉讓
 // ════════════════════════════════
-let trFromClient = null, trToClient = null;
+let trFromClient = null;
+let trRowCount = 0;
 
-let _trTimer = {};
-function onTransferSearch(side){
-  const inputId=side==='from'?'tr-from-name':'tr-to-name';
-  const suggestId=side==='from'?'tr-from-suggest':'tr-to-suggest';
-  const val=document.getElementById(inputId).value.trim();
-  const box=document.getElementById(suggestId);
-  if(side==='from'){trFromClient=null;resetTransferFrom();}else trToClient=null;
-  if(!val){box.style.display='none';return;}
-  box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">搜尋中…</div>';
-  box.style.display='block';
-  clearTimeout(_trTimer[side]);
-  _trTimer[side]=setTimeout(async()=>{
-    await searchClients(val);
-    const cur=document.getElementById(inputId).value.trim();
-    if(cur!==val) return;
-    const matches=CLIENT_DB.filter(c=>c.name.includes(val));
-    if(!matches.length){box.innerHTML='<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>';return;}
-    const idLabel={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
-    box.innerHTML=matches.map((c,i)=>`<div class="suggest-item" onclick="pickTransferClient('${side}',${CLIENT_DB.indexOf(c)})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
-    box.style.display='block';
-  }, 400);
+function onTransferSearch(side) {
+  if (side !== 'from') return;
+  const val = document.getElementById('tr-from-name').value.trim();
+  const box = document.getElementById('tr-from-suggest');
+  trFromClient = null;
+  resetTransferFrom();
+  if (!val) { box.style.display = 'none'; return; }
+  const matches = CLIENT_LIST.filter(c => c.name.includes(val));
+  if (!matches.length) { box.innerHTML = '<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>'; box.style.display='block'; return; }
+  const idLabel = { vip:'VIP', mem:'會員', biz:'業務夥伴', '':'一般' };
+  box.innerHTML = matches.map(c => `<div class="suggest-item" onclick="pickTransferFrom(${CLIENT_LIST.indexOf(c)})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
+  box.style.display = 'block';
 }
 
-function pickTransferClient(side, idx) {
-  const c = CLIENT_DB[idx];
-  if(side==='from'){
-    trFromClient=c;
-    document.getElementById('tr-from-name').value=c.name;
-    document.getElementById('tr-from-birth').value=c.birth;
-    document.getElementById('tr-from-phone').value=c.phone;
-    document.getElementById('tr-from-suggest').style.display='none';
-    // CLIENT_LIST 已包含完整資料，直接使用
-    renderFromPackages(c);
-  } else {
-    trToClient=c;
-    document.getElementById('tr-to-name').value=c.name;
-    document.getElementById('tr-to-birth').value=c.birth;
-    document.getElementById('tr-to-phone').value=c.phone;
-    document.getElementById('tr-to-suggest').style.display='none';
+function pickTransferFrom(idx) {
+  const c = CLIENT_LIST[idx];
+  trFromClient = c;
+  document.getElementById('tr-from-name').value = c.name;
+  document.getElementById('tr-from-birth').value = c.birth;
+  document.getElementById('tr-from-phone').value = c.phone;
+  document.getElementById('tr-from-suggest').style.display = 'none';
+  renderFromPackages(c);
+  document.querySelectorAll('.tr-therapy-sel').forEach(sel => updateTrTherapySel(sel));
+}
 
+function resetTransferFrom() {
+  ['tr-from-birth','tr-from-phone'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const fp = document.getElementById('tr-from-packages');
+  if (fp) fp.style.display = 'none';
+  document.querySelectorAll('.tr-therapy-sel').forEach(sel => {
+    sel.innerHTML = '<option value="">請先選擇轉讓人</option>';
+  });
+}
+
+function renderFromPackages(c) {
+  const active = (c.packages||[]).filter(p => p.used < p.total);
+  const pkgDiv = document.getElementById('tr-from-packages');
+  const pkgList = document.getElementById('tr-from-pkg-list');
+  if (!active.length) {
+    pkgList.innerHTML = '<div style="font-size:13px;color:var(--text3)">無可轉讓課程</div>';
+    pkgDiv.style.display = 'block'; return;
+  }
+  pkgList.innerHTML = active.map(p => `<div class="pkg-row"><span><strong>${p.name}</strong></span><span class="badge badge-green">剩 ${p.total-p.used} ${p.unit}</span></div>`).join('');
+  pkgDiv.style.display = 'block';
+}
+
+function updateTrTherapySel(sel) {
+  if (!trFromClient) return;
+  const active = (trFromClient.packages||[]).filter(p => p.used < p.total);
+  sel.innerHTML = '<option value="">請選擇療程</option>' + active.map(p =>
+    `<option value="${p.name}" data-unit="${p.unit}" data-remain="${p.total-p.used}">${p.name}（剩 ${p.total-p.used} ${p.unit}）</option>`
+  ).join('');
+}
+
+function addTransferRow() {
+  const container = document.getElementById('tr-rows-container');
+  const rowId = ++trRowCount;
+  const div = document.createElement('div');
+  div.className = 'card'; div.id = 'tr-row-' + rowId;
+  div.style.marginBottom = '12px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">第 ${rowId} 筆轉讓</div>
+      <button onclick="removeTransferRow(${rowId})" style="font-size:12px;color:var(--err);background:none;border:none;cursor:pointer;padding:2px 6px">移除</button>
+    </div>
+    <div class="grid3" style="margin-bottom:10px">
+      <div class="field" style="position:relative">
+        <label>受讓人</label>
+        <input type="text" id="tr-to-name-${rowId}" placeholder="輸入姓名搜尋" oninput="onTransferToSearch(${rowId})" autocomplete="off">
+        <div class="suggest-box" id="tr-to-suggest-${rowId}" style="display:none"></div>
+      </div>
+      <div class="field"><label>生日（核對）</label><input type="date" id="tr-to-birth-${rowId}" readonly style="background:var(--surface2)"></div>
+      <div class="field"><label>電話</label><input type="text" id="tr-to-phone-${rowId}" readonly style="background:var(--surface2)"></div>
+    </div>
+    <div class="grid3">
+      <div class="field">
+        <label>療程名稱</label>
+        <select id="tr-therapy-${rowId}" class="tr-therapy-sel" onchange="updateTrHint(${rowId})">
+          <option value="">請先選擇轉讓人</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>轉讓數量</label>
+        <input type="number" id="tr-qty-${rowId}" min="1" value="1" oninput="updateTrHint(${rowId})">
+      </div>
+      <div class="field">
+        <label>單位</label>
+        <input type="text" id="tr-unit-${rowId}" readonly style="background:var(--surface2)">
+      </div>
+    </div>
+    <div id="tr-hint-${rowId}" style="font-size:12px;color:var(--text3);margin-top:6px;display:none"></div>
+  `;
+  container.appendChild(div);
+  if (trFromClient) updateTrTherapySel(div.querySelector('.tr-therapy-sel'));
+}
+
+function removeTransferRow(rowId) {
+  const el = document.getElementById('tr-row-' + rowId);
+  if (el) el.remove();
+}
+
+function onTransferToSearch(rowId) {
+  const val = document.getElementById('tr-to-name-' + rowId).value.trim();
+  const box = document.getElementById('tr-to-suggest-' + rowId);
+  if (!val) { box.style.display = 'none'; return; }
+  const matches = CLIENT_LIST.filter(c => c.name.includes(val));
+  const idLabel = { vip:'VIP', mem:'會員', biz:'業務夥伴', '':'一般' };
+  if (!matches.length) { box.innerHTML = '<div class="suggest-item" style="color:var(--text3);font-size:13px">找不到客戶</div>'; box.style.display='block'; return; }
+  box.innerHTML = matches.map(c => `<div class="suggest-item" onclick="pickTransferTo(${rowId},${CLIENT_LIST.indexOf(c)})"><div class="suggest-name">${c.name} <span class="badge badge-gray" style="font-size:10px">${idLabel[c.id]||'一般'}</span></div><div class="suggest-sub">生日 ${c.birth}　電話 ${c.phone}</div></div>`).join('');
+  box.style.display = 'block';
+}
+
+function pickTransferTo(rowId, idx) {
+  const c = CLIENT_LIST[idx];
+  document.getElementById('tr-to-name-' + rowId).value = c.name;
+  document.getElementById('tr-to-birth-' + rowId).value = c.birth;
+  document.getElementById('tr-to-phone-' + rowId).value = c.phone;
+  document.getElementById('tr-to-suggest-' + rowId).style.display = 'none';
+}
+
+function updateTrHint(rowId) {
+  const sel = document.getElementById('tr-therapy-' + rowId);
+  const opt = sel.options[sel.selectedIndex];
+  const unitEl = document.getElementById('tr-unit-' + rowId);
+  const hint = document.getElementById('tr-hint-' + rowId);
+  if (!opt || !opt.value) { unitEl.value=''; hint.style.display='none'; return; }
+  unitEl.value = opt.dataset.unit || '';
+  hint.textContent = `可轉讓上限：${opt.dataset.remain} ${opt.dataset.unit}`;
+  hint.style.display = 'block';
+}
+
+async function submitTransfer() {
+  const errEl = document.getElementById('tr-error');
+  const okEl  = document.getElementById('tr-success');
+  errEl.style.display='none'; okEl.style.display='none';
+  if (!trFromClient) { errEl.textContent='請選擇轉讓人'; errEl.style.display='flex'; return; }
+  const rows = document.querySelectorAll('#tr-rows-container .card');
+  if (!rows.length) { errEl.textContent='請新增至少一筆轉讓'; errEl.style.display='flex'; return; }
+  const transfers = [];
+  for (const row of rows) {
+    const rowId = row.id.replace('tr-row-', '');
+    const toName  = document.getElementById('tr-to-name-' + rowId)?.value.trim();
+    const toBirth  = document.getElementById('tr-to-birth-' + rowId)?.value;
+    const therapy  = document.getElementById('tr-therapy-' + rowId)?.value;
+    const qty      = parseFloat(document.getElementById('tr-qty-' + rowId)?.value) || 0;
+    const unit     = document.getElementById('tr-unit-' + rowId)?.value;
+    if (!toName || !toBirth || !therapy || qty <= 0) { errEl.textContent=`第 ${rowId} 筆資料不完整`; errEl.style.display='flex'; return; }
+    if (toName === trFromClient.name && toBirth === trFromClient.birth) { errEl.textContent=`第 ${rowId} 筆：轉讓人與受讓人不可為同一人`; errEl.style.display='flex'; return; }
+    transfers.push({ toName, toBirth, therapyName:therapy, qty, unit });
+  }
+  const btn = document.getElementById('tr-submit-btn');
+  btn.disabled=true; btn.textContent='處理中…';
+  let successCount=0; const errors=[];
+  for (const t of transfers) {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({
+        action:'transferCourse', secret:API_SECRET,
+        fromName:trFromClient.name, fromBirth:trFromClient.birth,
+        toName:t.toName, toBirth:t.toBirth, therapyName:t.therapyName, qty:t.qty, unit:t.unit
+      })});
+      const json = await res.json();
+      if (json.status==='ok') successCount++;
+      else errors.push(json.message);
+    } catch(e) { errors.push('網路錯誤'); }
+  }
+  btn.disabled=false; btn.textContent='確認轉讓並寫入記錄';
+  if (errors.length) { errEl.textContent=errors.join('；'); errEl.style.display='flex'; }
+  if (successCount>0) {
+    okEl.textContent=`✓ 成功完成 ${successCount} 筆轉讓`;
+    okEl.style.display='block';
+    showToast(`已完成 ${successCount} 筆轉讓`);
+    await loadClients();
+    if (trFromClient) {
+      trFromClient = CLIENT_LIST.find(c=>c.name===trFromClient.name&&c.birth===trFromClient.birth)||trFromClient;
+      renderFromPackages(trFromClient);
+      document.querySelectorAll('.tr-therapy-sel').forEach(sel=>updateTrTherapySel(sel));
+    }
   }
 }
 
-function resetTransferFrom(){
-  document.getElementById('tr-from-birth').value='';
-  document.getElementById('tr-from-phone').value='';
-  document.getElementById('tr-from-packages').style.display='none';
-  document.getElementById('tr-therapy').innerHTML='<option value="">請先選擇轉讓人</option>';
-  document.getElementById('tr-unit').value='';
-  document.getElementById('tr-remain-hint').textContent='';
-}
-
-function renderFromPackages(c){
-  const active=(c.packages||[]).filter(p=>p.used<p.total);
-  const pkgDiv=document.getElementById('tr-from-packages');
-  const pkgList=document.getElementById('tr-from-pkg-list');
-  if(!active.length){pkgList.innerHTML='<div style="font-size:13px;color:var(--text3)">無可轉讓課程</div>';pkgDiv.style.display='block';return;}
-  pkgList.innerHTML=active.map(p=>`<div class="pkg-row"><span><strong>${p.name}</strong></span><span class="badge badge-green">剩 ${p.total-p.used} ${p.unit}</span></div>`).join('');
-  pkgDiv.style.display='block';
-  // 更新療程下拉
-  const sel=document.getElementById('tr-therapy');
-  sel.innerHTML='<option value="">請選擇療程</option>'+active.map(p=>`<option value="${p.name}" data-unit="${p.unit}" data-remain="${p.total-p.used}">${p.name}（剩 ${p.total-p.used} ${p.unit}）</option>`).join('');
-  sel.onchange=updateTransferHint;
-}
-
-function updateTransferHint(){
-  const sel=document.getElementById('tr-therapy');
-  const opt=sel.options[sel.selectedIndex];
-  if(!opt||!opt.value){document.getElementById('tr-unit').value='';document.getElementById('tr-remain-hint').textContent='';return;}
-  document.getElementById('tr-unit').value=opt.dataset.unit||'';
-  const remain=opt.dataset.remain||0;
-  document.getElementById('tr-remain-hint').textContent=`${opt.value} 可轉讓數量：${remain} ${opt.dataset.unit||''}`;
-  document.getElementById('tr-qty').max=remain;
-}
-
-async function submitTransfer(){
-  const fromName=document.getElementById('tr-from-name').value.trim();
-  const fromBirth=document.getElementById('tr-from-birth').value;
-  const toName=document.getElementById('tr-to-name').value.trim();
-  const toBirth=document.getElementById('tr-to-birth').value;
-  const therapyName=document.getElementById('tr-therapy').value;
-  const qty=parseFloat(document.getElementById('tr-qty').value)||0;
-  const unit=document.getElementById('tr-unit').value;
-  const errEl=document.getElementById('tr-error');
-  const okEl=document.getElementById('tr-success');
-  errEl.style.display='none'; okEl.style.display='none';
-
-  if(!fromName||!fromBirth){errEl.textContent='請選擇轉讓人';errEl.style.display='flex';return;}
-  if(!toName||!toBirth){errEl.textContent='請選擇受讓人';errEl.style.display='flex';return;}
-  if(!therapyName){errEl.textContent='請選擇轉讓療程';errEl.style.display='flex';return;}
-  if(qty<=0){errEl.textContent='請輸入轉讓數量';errEl.style.display='flex';return;}
-  if(fromName===toName&&fromBirth===toBirth){errEl.textContent='轉讓人與受讓人不可為同一人';errEl.style.display='flex';return;}
-
-  const btn=document.getElementById('tr-submit-btn');
-  btn.disabled=true;btn.textContent='處理中…';
-
-  try{
-    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
-      action:'transferCourse',secret:API_SECRET,
-      fromName,fromBirth,toName,toBirth,therapyName,qty,unit
-    })});
-    const json=await res.json();
-    if(json.status==='ok'){
-      okEl.className='warn-item ok';
-      okEl.textContent=json.message;
-      okEl.style.display='flex';
-      showToast('轉讓成功！');
-      await loadClients(); // 重新載入客戶資料
-    } else {
-      errEl.textContent=json.message;errEl.style.display='flex';
-    }
-  }catch(err){errEl.textContent='傳送失敗：'+err.message;errEl.style.display='flex';}
-  btn.disabled=false;btn.textContent='確認轉讓並寫入記錄';
-}
-
-document.addEventListener('click',e=>{
-  if(!e.target.closest('#tr-from-name')&&!e.target.closest('#tr-from-suggest'))
+document.addEventListener('click', e => {
+  if (!e.target.closest('#tr-from-name') && !e.target.closest('#tr-from-suggest'))
     document.getElementById('tr-from-suggest').style.display='none';
-  if(!e.target.closest('#tr-to-name')&&!e.target.closest('#tr-to-suggest'))
-    document.getElementById('tr-to-suggest').style.display='none';
+  document.querySelectorAll('[id^="tr-to-suggest-"]').forEach(box => {
+    const rowId = box.id.replace('tr-to-suggest-','');
+    if (!e.target.closest('#tr-to-name-'+rowId) && !e.target.closest('#tr-to-suggest-'+rowId))
+      box.style.display='none';
+  });
 });
 
 loadClients();
 initRows();
+addTransferRow();
 </script>
 </body>
 </html>
