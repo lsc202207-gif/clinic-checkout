@@ -216,11 +216,22 @@ function renderReceipt(o){
   if(+o.discount>0) amountHtml+=`<div class="amount-row deduct"><span>折扣</span><span>－NT$ ${Number(o.discount).toLocaleString()}</span></div>`;
   amountHtml+=`<div class="amount-row total"><span>應付總額</span><span>NT$ ${Number(o.total).toLocaleString()}</span></div>`;
 
-  // 簽名
+  // 簽名：把 Drive 分享連結轉成可直接顯示的圖片 URL
   let signHtml='<div class="no-sign">未簽名</div>';
   if(o.signUrl && o.signUrl.startsWith('http')){
-    signHtml=`<div style="margin-bottom:10px"><img src="${o.signUrl}" class="sign-img" alt="客戶簽名" onerror="this.style.display='none'"></div>
-      <a href="${o.signUrl}" target="_blank" class="sign-link">→ 在 Google Drive 查看原始簽名</a>`;
+    // 從 Drive URL 提取 File ID，轉成直接顯示格式
+    let imgSrc = o.signUrl;
+    const driveMatch = o.signUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if(driveMatch) {
+      imgSrc = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
+    }
+    signHtml=`<div style="margin-bottom:10px">
+      <img src="${imgSrc}" class="sign-img" alt="客戶簽名"
+        style="max-width:320px;border:1px solid #e0e0e0;border-radius:8px;background:#f9f9f7;display:block"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;font-size:13px;color:#999">簽名圖片載入失敗，<a href='${o.signUrl}' target='_blank' style='color:#2563eb'>點此在 Drive 查看</a></div>
+    </div>
+    <a href="${o.signUrl}" target="_blank" class="sign-link" style="font-size:12px;color:#999">→ 在 Google Drive 查看原始檔案</a>`;
   }
 
   const html=`
