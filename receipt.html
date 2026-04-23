@@ -5,115 +5,69 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>小新肌診所 — 訂單收據查詢</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Noto Sans TC',sans-serif;background:#f5f5f0;color:#1a1a2e;min-height:100vh}
-  
-  /* 查詢頁面 */
-  .search-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-  .search-card{background:#fff;border-radius:16px;padding:40px 32px;width:100%;max-width:440px;box-shadow:0 4px 24px rgba(0,0,0,0.08);text-align:center}
-  .logo{width:140px;margin-bottom:8px}
-  .clinic-name{font-size:15px;color:#666;margin-bottom:32px;letter-spacing:.05em}
-  .search-title{font-size:20px;font-weight:700;margin-bottom:24px;color:#1a1a2e}
-  .field{text-align:left;margin-bottom:16px}
-  label{font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px}
-  input{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:15px;font-family:inherit;color:#1a1a2e;outline:none;transition:border-color .2s}
-  input:focus{border-color:#8fbc8f}
-  .hint{font-size:12px;color:#999;margin-top:6px}
-  .search-btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;transition:opacity .2s;font-family:inherit}
-  .search-btn:hover{opacity:.85}
-  .search-btn:disabled{opacity:.5;cursor:not-allowed}
-  .error-msg{color:#dc2626;font-size:13px;margin-top:12px;display:none}
-
-  /* 收據頁面 */
-  .receipt-page{display:none;max-width:680px;margin:0 auto;padding:24px}
-  .back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#666;cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:inherit;padding:0}
-  .back-btn:hover{color:#1a1a2e}
-
-  /* 收據主體 */
-  .receipt{background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
-  
-  /* 收據標題 */
-  .receipt-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a2e;padding-bottom:20px;margin-bottom:24px}
-  .receipt-logo{width:100px}
-  .receipt-meta{text-align:right}
-  .receipt-meta .order-id{font-size:12px;color:#999;margin-bottom:4px}
-  .receipt-meta .order-date{font-size:14px;font-weight:600}
-  .receipt-meta .pay-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px}
-  .status-paid{background:#dcfce7;color:#16a34a}
-  .status-deposit{background:#fef9c3;color:#ca8a04}
-  .status-balance{background:#dbeafe;color:#2563eb}
-
-  /* 客戶資訊 */
-  .client-section{background:#f9f9f7;border-radius:10px;padding:16px 20px;margin-bottom:20px}
-  .client-name{font-size:20px;font-weight:700;margin-bottom:10px}
-  .client-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .client-item{font-size:13px;color:#666}
-  .client-item span{color:#1a1a2e;font-weight:500}
-
-  /* 療程表格 */
-  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:10px}
-  .items-section{margin-bottom:20px}
-  .item-type-label{font-size:11px;font-weight:600;color:#8fbc8f;margin:14px 0 6px;letter-spacing:.05em}
-  .item-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
-  .item-row:last-child{border-bottom:none}
-  .item-name{color:#1a1a2e}
-  .item-qty{color:#666;font-size:13px;text-align:right}
-  .item-price{color:#1a1a2e;font-weight:600;text-align:right;min-width:80px}
-
-  /* 金額摘要 */
-  .amount-section{border-top:1px solid #e0e0e0;padding-top:16px;margin-bottom:20px}
-  .amount-row{display:flex;justify-content:space-between;font-size:13px;color:#666;padding:4px 0}
-  .amount-row.total{font-size:17px;font-weight:700;color:#1a1a2e;border-top:1px solid #1a1a2e;margin-top:8px;padding-top:10px}
-  .amount-row.deduct{color:#16a34a}
-
-  /* 付款方式 */
-  .pay-section{background:#f9f9f7;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px}
-  .pay-method{display:flex;justify-content:space-between;padding:3px 0;color:#666}
-  .pay-method span{color:#1a1a2e;font-weight:500}
-
-  /* 備註 */
-  .note-section{font-size:13px;color:#666;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:20px;display:none}
-
-  /* 簽名 */
-  .sign-section{border-top:2px solid #1a1a2e;padding-top:20px;margin-top:4px}
-  .sign-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:12px}
-  .sign-img{max-width:280px;border:1px solid #e0e0e0;border-radius:8px;background:#f9f9f7}
-  .sign-link{font-size:13px;color:#2563eb;text-decoration:none}
-  .no-sign{font-size:13px;color:#999}
-
-  /* 頁尾 */
-  .receipt-footer{text-align:center;margin-top:24px;font-size:11px;color:#bbb;letter-spacing:.05em}
-
-  /* 列印按鈕 */
-  .print-btn{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;font-family:inherit;transition:opacity .2s}
-  .print-btn:hover{opacity:.85}
-
-  /* 多筆結果 */
-  .results-list{display:none;max-width:680px;margin:0 auto;padding:24px}
-  .result-card{background:#fff;border-radius:12px;padding:20px;margin-bottom:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);transition:box-shadow .2s;display:flex;justify-content:space-between;align-items:center}
-  .result-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.12)}
-  .result-info .date{font-size:13px;color:#999;margin-bottom:4px}
-  .result-info .name{font-size:16px;font-weight:700}
-  .result-info .oid{font-size:12px;color:#999;margin-top:2px}
-  .result-amount{font-size:18px;font-weight:700;color:#1a1a2e}
-
-  @media print{
-    .back-btn,.print-btn,.search-page,.results-list{display:none!important}
-    body{background:#fff}
-    .receipt-page{padding:0;display:block!important}
-    .receipt{box-shadow:none;padding:20px}
-  }
-  @media(max-width:600px){
-    .receipt{padding:20px}
-    .receipt-header{flex-direction:column;gap:12px}
-    .receipt-meta{text-align:left}
-    .client-grid{grid-template-columns:1fr}
-  }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:#f5f5f0;color:#1a1a2e;min-height:100vh}
+.search-page{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.search-card{background:#fff;border-radius:16px;padding:40px 32px;width:100%;max-width:440px;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center}
+.logo{width:140px;margin-bottom:8px}
+.clinic-name{font-size:15px;color:#666;margin-bottom:32px;letter-spacing:.05em}
+.search-title{font-size:20px;font-weight:700;margin-bottom:24px}
+.field{text-align:left;margin-bottom:16px}
+label{font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px}
+input{width:100%;padding:12px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:15px;font-family:inherit;outline:none;transition:border-color .2s}
+input:focus{border-color:#8fbc8f}
+.hint{font-size:12px;color:#999;margin-top:6px}
+.search-btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;font-family:inherit}
+.search-btn:disabled{opacity:.5;cursor:not-allowed}
+.error-msg{color:#dc2626;font-size:13px;margin-top:12px;display:none}
+.receipt-page{display:none;max-width:680px;margin:0 auto;padding:24px}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#666;cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:inherit;padding:0}
+.receipt{background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.receipt-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a1a2e;padding-bottom:20px;margin-bottom:24px}
+.receipt-logo{width:100px}
+.receipt-meta{text-align:right}
+.receipt-meta .order-id{font-size:12px;color:#999;margin-bottom:4px}
+.receipt-meta .order-date{font-size:14px;font-weight:600}
+.pay-status{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px}
+.status-paid{background:#dcfce7;color:#16a34a}
+.status-deposit{background:#fef9c3;color:#ca8a04}
+.status-balance{background:#dbeafe;color:#2563eb}
+.client-section{background:#f9f9f7;border-radius:10px;padding:16px 20px;margin-bottom:20px}
+.client-name{font-size:20px;font-weight:700;margin-bottom:10px}
+.client-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.client-item{font-size:13px;color:#666}
+.client-item span{color:#1a1a2e;font-weight:500}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:10px}
+.item-type-label{font-size:11px;font-weight:600;color:#8fbc8f;margin:14px 0 6px;letter-spacing:.05em}
+.item-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+.item-row:last-child{border-bottom:none}
+.item-qty{color:#666;font-size:13px;text-align:right}
+.item-price{color:#1a1a2e;font-weight:600;text-align:right;min-width:80px}
+.amount-section{border-top:1px solid #e0e0e0;padding-top:16px;margin-bottom:20px}
+.amount-row{display:flex;justify-content:space-between;font-size:13px;color:#666;padding:4px 0}
+.amount-row.total{font-size:17px;font-weight:700;color:#1a1a2e;border-top:1px solid #1a1a2e;margin-top:8px;padding-top:10px}
+.amount-row.deduct{color:#16a34a}
+.pay-section{background:#f9f9f7;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px}
+.sign-section{border-top:2px solid #1a1a2e;padding-top:20px;margin-top:4px}
+.sign-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:12px}
+.receipt-footer{text-align:center;margin-top:24px;font-size:11px;color:#bbb;letter-spacing:.05em}
+.print-btn{display:block;width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;font-family:inherit}
+@media print{
+  .back-btn,.print-btn,.search-page{display:none!important}
+  body{background:#fff}
+  .receipt-page{padding:0;display:block!important}
+  .receipt{box-shadow:none;padding:20px}
+}
+@media(max-width:600px){
+  .receipt{padding:20px}
+  .receipt-header{flex-direction:column;gap:12px}
+  .receipt-meta{text-align:left}
+  .client-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<!-- 查詢頁面 -->
 <div class="search-page" id="search-page">
   <div class="search-card">
     <img src="data:image/png;base64,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" class="logo" alt="小新肌">
@@ -135,14 +89,6 @@
   </div>
 </div>
 
-<!-- 多筆結果列表 -->
-<div class="results-list" id="results-list">
-  <button class="back-btn" onclick="showSearch()">← 重新查詢</button>
-  <div style="font-size:18px;font-weight:700;margin-bottom:16px">找到多筆訂單，請選擇</div>
-  <div id="results-container"></div>
-</div>
-
-<!-- 收據頁面 -->
 <div class="receipt-page" id="receipt-page">
   <button class="back-btn" onclick="showSearch()">← 重新查詢</button>
   <div class="receipt" id="receipt-content"></div>
@@ -157,7 +103,6 @@ const LOGO_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAACA
 function showSearch(){
   document.getElementById('search-page').style.display='flex';
   document.getElementById('receipt-page').style.display='none';
-  document.getElementById('results-list').style.display='none';
   document.getElementById('error-msg').style.display='none';
 }
 
@@ -186,29 +131,29 @@ function showError(msg){
 }
 
 function renderReceipt(o){
-  const statusMap={'paid':'全額付清','deposit':'訂金（尚有尾款）','balance':'補尾款','':''};
+  const statusMap={'paid':'全額付清','deposit':'訂金（尚有尾款）','balance':'補尾款','':'全額付清'};
   const statusClass={'paid':'status-paid','deposit':'status-deposit','balance':'status-balance','':'status-paid'};
 
   // 付款方式
   const pays=[];
-  if(+o.payCash>0) pays.push(`現金 NT$ ${Number(o.payCash).toLocaleString()}`);
-  if(+o.payTransfer>0) pays.push(`轉帳${o.payBank?'('+o.payBank+')':''} NT$ ${Number(o.payTransfer).toLocaleString()}`);
-  if(+o.payInstall>0) pays.push(`無卡分期${o.payInstallBank?'('+o.payInstallBank+')':''} NT$ ${Number(o.payInstall).toLocaleString()}`);
+  if(+o.payCash>0) pays.push('現金 NT$ '+Number(o.payCash).toLocaleString());
+  if(+o.payTransfer>0) pays.push('轉帳'+(o.payBank?'('+o.payBank+')':'')+' NT$ '+Number(o.payTransfer).toLocaleString());
+  if(+o.payInstall>0) pays.push('無卡分期'+(o.payInstallBank?'('+o.payInstallBank+')':'')+' NT$ '+Number(o.payInstall).toLocaleString());
 
   // 療程明細
-  const buys=o.items.filter(i=>i.type==='購買');
-  const svcs=o.items.filter(i=>i.type==='施作');
+  const buys=(o.items||[]).filter(i=>i.type==='購買');
+  const svcs=(o.items||[]).filter(i=>i.type==='施作');
   let itemsHtml='';
   if(buys.length){
     itemsHtml+='<div class="item-type-label">購買療程</div>';
-    buys.forEach(i=>{ itemsHtml+=`<div class="item-row"><span class="item-name">${i.name}</span><span class="item-qty">${i.qty} ${i.unit}</span><span class="item-price">NT$ ${Number(i.price).toLocaleString()}</span></div>`; });
+    buys.forEach(i=>{ itemsHtml+=`<div class="item-row"><span>${i.name}</span><span class="item-qty">${i.qty} ${i.unit}</span><span class="item-price">NT$ ${Number(i.price).toLocaleString()}</span></div>`; });
   }
   if(svcs.length){
     itemsHtml+='<div class="item-type-label">今日施作</div>';
-    svcs.forEach(i=>{ itemsHtml+=`<div class="item-row"><span class="item-name">${i.name}${i.doctor?'<span style="font-size:11px;color:#999;margin-left:6px">'+i.doctor+'</span>':''}</span><span class="item-qty">${i.qty} ${i.unit}</span><span class="item-price"></span></div>`; });
+    svcs.forEach(i=>{ itemsHtml+=`<div class="item-row"><span>${i.name}${i.doctor?'<span style="font-size:11px;color:#999;margin-left:6px">'+i.doctor+'</span>':''}</span><span class="item-qty">${i.qty} ${i.unit}</span><span class="item-price"></span></div>`; });
   }
 
-  // 金額區塊
+  // 金額
   let amountHtml=`<div class="amount-row"><span>療程小計</span><span>NT$ ${Number(o.subtotal).toLocaleString()}</span></div>`;
   if(+o.topup>0) amountHtml+=`<div class="amount-row"><span>${o.creditType||''}儲值</span><span>NT$ ${Number(o.topup).toLocaleString()}</span></div>`;
   if(+o.creditDeduct>0) amountHtml+=`<div class="amount-row deduct"><span>儲值金折抵</span><span>－NT$ ${Number(o.creditDeduct).toLocaleString()}</span></div>`;
@@ -216,22 +161,28 @@ function renderReceipt(o){
   if(+o.discount>0) amountHtml+=`<div class="amount-row deduct"><span>折扣</span><span>－NT$ ${Number(o.discount).toLocaleString()}</span></div>`;
   amountHtml+=`<div class="amount-row total"><span>應付總額</span><span>NT$ ${Number(o.total).toLocaleString()}</span></div>`;
 
-  // 簽名：把 Drive 分享連結轉成可直接顯示的圖片 URL
-  let signHtml='<div class="no-sign">未簽名</div>';
-  if(o.signUrl && o.signUrl.startsWith('http')){
-    // 從 Drive URL 提取 File ID，轉成直接顯示格式
-    let imgSrc = o.signUrl;
-    const driveMatch = o.signUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if(driveMatch) {
-      imgSrc = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
+  // 簽名：把 Drive 連結轉成可直接顯示的圖片
+  let signHtml='<div style="font-size:13px;color:#999">未簽名</div>';
+  const url = o.signUrl || '';
+  if(url && url.startsWith('http') && url !== '未簽名' && url !== '儲存失敗'){
+    // Apps Script 新版回傳格式：thumbnailUrl|viewUrl
+    // 舊版格式：直接是 Drive view URL
+    let imgSrc, viewUrl;
+    if(url.includes('|')){
+      [imgSrc, viewUrl] = url.split('|');
+    } else {
+      const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      imgSrc = m ? 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w600' : url;
+      viewUrl = url;
     }
-    signHtml=`<div style="margin-bottom:10px">
-      <img src="${imgSrc}" class="sign-img" alt="客戶簽名"
-        style="max-width:320px;border:1px solid #e0e0e0;border-radius:8px;background:#f9f9f7;display:block"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-      <div style="display:none;font-size:13px;color:#999">簽名圖片載入失敗，<a href='${o.signUrl}' target='_blank' style='color:#2563eb'>點此在 Drive 查看</a></div>
-    </div>
-    <a href="${o.signUrl}" target="_blank" class="sign-link" style="font-size:12px;color:#999">→ 在 Google Drive 查看原始檔案</a>`;
+    signHtml = `
+      <img src="${imgSrc}" alt="客戶簽名"
+        style="max-width:300px;width:100%;border:1px solid #e0e0e0;border-radius:8px;background:#f9f9f7;display:block;margin-bottom:8px"
+        onerror="this.style.display='none';document.getElementById('sign-fallback').style.display='block'">
+      <div id="sign-fallback" style="display:none;font-size:13px;color:#999;margin-bottom:8px">
+        圖片無法嵌入，<a href="${viewUrl}" target="_blank" style="color:#2563eb">點此在 Drive 開啟</a>
+      </div>
+      <a href="${viewUrl}" target="_blank" style="font-size:12px;color:#aaa">→ Drive 原始檔案</a>`;
   }
 
   const html=`
@@ -243,39 +194,32 @@ function renderReceipt(o){
         <div class="pay-status ${statusClass[o.payStatus]||'status-paid'}">${statusMap[o.payStatus]||'全額付清'}</div>
       </div>
     </div>
-
     <div class="client-section">
       <div class="client-name">${o.clientName}</div>
       <div class="client-grid">
         <div class="client-item">電話 <span>${o.phone}</span></div>
         <div class="client-item">身分 <span>${o.idType||'一般'}</span></div>
-        ${o.owner?'<div class="client-item">負責人 <span>'+o.owner+'</span></div>':''}
+        ${o.owner?'<div class="client-item">結帳者 <span>'+o.owner+'</span></div>':''}
         ${o.doctor?'<div class="client-item">執行醫師 <span>'+o.doctor+'</span></div>':''}
       </div>
     </div>
-
-    <div class="items-section">
+    <div style="margin-bottom:20px">
       <div class="section-title">療程明細</div>
       ${itemsHtml||'<div style="font-size:13px;color:#999">無療程記錄</div>'}
     </div>
-
     <div class="amount-section">
       <div class="section-title">費用摘要</div>
       ${amountHtml}
     </div>
-
     <div class="pay-section">
       <div class="section-title" style="margin-bottom:8px">付款方式</div>
-      ${pays.length?pays.map(p=>`<div class="pay-method"><span>${p}</span></div>`).join(''):'<div class="pay-method">—</div>'}
+      ${pays.length?pays.map(p=>'<div style="font-size:13px;color:#444;padding:3px 0">'+p+'</div>').join(''):'<div style="font-size:13px;color:#999">—</div>'}
     </div>
-
-    ${o.note?`<div class="note-section" style="display:block">備註：${o.note}</div>`:''}
-
+    ${o.note?'<div style="font-size:13px;color:#666;background:#fffbeb;border-radius:8px;padding:12px 14px;margin-bottom:20px">備註：'+o.note+'</div>':''}
     <div class="sign-section">
       <div class="sign-title">客戶簽名確認</div>
       ${signHtml}
     </div>
-
     <div class="receipt-footer">小新肌診所　Little Secret　感謝您的消費，期待再次為您服務</div>
   `;
 
@@ -284,8 +228,7 @@ function renderReceipt(o){
   document.getElementById('receipt-page').style.display='block';
 }
 
-// Enter 鍵觸發查詢
-document.addEventListener('keydown',e=>{ if(e.key==='Enter') doSearch(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
 </script>
 </body>
 </html>
