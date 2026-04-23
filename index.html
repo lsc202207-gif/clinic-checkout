@@ -269,7 +269,7 @@ body{padding-bottom:40px}
       <div class="field"><label>電話</label><input id="f-phone" type="tel" placeholder="0912-345-678"></div>
     </div>
     <div class="grid4">
-      <div class="field"><label>負責人</label>
+      <div class="field"><label>結帳者</label>
         <select id="f-owner"><option value="">請選擇</option><option>Polly</option><option>Irene</option><option>Gina</option><option>蔡蔡</option></select>
       </div>
       <div class="field"><label>執行醫師</label>
@@ -408,7 +408,7 @@ body{padding-bottom:40px}
       <span class="badge badge-gray" id="p-id-badge">一般</span>
     </div>
     <div class="preview-grid">
-      <div class="preview-cell"><div class="lbl">負責人</div><div class="val" id="p-owner">—</div></div>
+      <div class="preview-cell"><div class="lbl">結帳者</div><div class="val" id="p-owner">—</div></div>
       <div class="preview-cell"><div class="lbl">執行醫師</div><div class="val" id="p-doctor">—</div></div>
       <div class="preview-cell"><div class="lbl">推薦人</div><div class="val" id="p-ref">—</div></div>
       <div class="preview-cell"><div class="lbl">管道來源</div><div class="val" id="p-source">—</div></div>
@@ -775,6 +775,20 @@ function buildThOpts() {
 }
 const TH_OPTS = buildThOpts();
 
+// 醫師選單（與訂單資料頁「執行醫師」同步）
+function buildDoctorOpts() {
+  const sel = document.getElementById('f-doctor');
+  if (!sel) return '<option value="">—</option>';
+  return Array.from(sel.options).map(o =>
+    `<option value="${o.value}">${o.text}</option>`
+  ).join('');
+}
+// 延遲到 DOM 載入後才能讀 f-doctor
+let DOCTOR_OPTS = '<option value="">—</option>';
+document.addEventListener('DOMContentLoaded', () => {
+  DOCTOR_OPTS = buildDoctorOpts();
+});
+
 // 搜尋客戶（輸入姓名後呼叫後端）
 // 本地搜尋（從已載入的 CLIENT_LIST 過濾，瞬間完成）
 async function searchClients(query) {
@@ -974,6 +988,7 @@ function syncFromPurchase(){
       <div class="row-field"><span class="row-label">施作內容</span><select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select></div>
       <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="${qty}" min="1" max="9999" oninput="checkSvcWarnings()"></div>
       <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">${unit}</div></div>
+      <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor">${DOCTOR_OPTS}</select></div>
       <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
       <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
     // 設定療程選項
@@ -1283,7 +1298,7 @@ async function submitOrder(){
   const cbHistory=selectedClient?(selectedClient.cashback_remain||0):0;
   const purchaseItems=[],serviceItems=[];
   document.querySelectorAll('#purchase-list .t-row-buy').forEach(r=>{const n=r.querySelector('select')?.value;if(!n)return;const inputs=r.querySelectorAll('input[type=number]');purchaseItems.push({name:n,qty:parseFloat(inputs[0]?.value)||1,unit:r.querySelector('.unit-display')?.textContent||'',price:parseFloat(inputs[1]?.value)||0});});
-  document.querySelectorAll('#service-list .t-row-svc').forEach(r=>{const n=r.querySelector('select')?.value;if(!n)return;const inputs=r.querySelectorAll('input');const qtyInput=Array.from(inputs).find(i=>i.type==='number');const noteInput=Array.from(inputs).find(i=>i.type==='text');serviceItems.push({name:n,qty:parseFloat(qtyInput?.value)||1,unit:r.querySelector('.unit-display')?.textContent||'',note:noteInput?.value||''});});
+  document.querySelectorAll('#service-list .t-row-svc').forEach(r=>{const n=r.querySelector('select:not(.svc-doctor)')?.value;if(!n)return;const inputs=r.querySelectorAll('input');const qtyInput=Array.from(inputs).find(i=>i.type==='number');const noteInput=Array.from(inputs).find(i=>i.type==='text');const doctorSel=r.querySelector('.svc-doctor');serviceItems.push({name:n,qty:parseFloat(qtyInput?.value)||1,unit:r.querySelector('.unit-display')?.textContent||'',doctor:doctorSel?.value||'',note:noteInput?.value||''});});
   const idLabels={vip:'VIP',mem:'會員',biz:'業務夥伴','':'一般'};
   const payload={
     action:'writeOrder',
