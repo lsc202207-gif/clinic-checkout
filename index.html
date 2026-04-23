@@ -273,7 +273,7 @@ body{padding-bottom:40px}
         <select id="f-owner"><option value="">請選擇</option><option>Polly</option><option>Irene</option><option>Gina</option><option>蔡蔡</option></select>
       </div>
       <div class="field"><label>執行醫師</label>
-        <select id="f-doctor"><option value="">請選擇</option><option>王瑋璨</option><option>李宗晏</option><option>葉艾芸</option><option>莊鈞智</option></select>
+        <select id="f-doctor" onchange="syncDoctorToSvcRows()" ><option value="">請選擇</option><option>王瑋璨</option><option>李宗晏</option><option>葉艾芸</option><option>莊鈞智</option></select>
       </div>
       <div class="field"><label>推薦人</label>
         <select id="f-ref"><option value="">請選擇</option><option>蕭安里</option><option>Miko(邱芷畇)</option><option>王婷奕</option><option>牛牛(劉苡沙)</option><option>芷葳(廖芷涵)</option><option>尤允希</option><option>許滾兒(許芯瑀)</option><option>黃D(黃郁茹)</option><option>昆妮(黃懿)</option><option>麥麥(鄭珈詩)</option><option>MiMi(林孟萱)</option><option>Abby(陳仕英)</option><option>Irene(江苡綸)</option><option>小荳(陳守庭)</option><option>77(林明欣)</option><option>言言(許庭瑄)</option><option>Fairy(蔡宛臻)</option><option>方若葳</option><option>張嘉玲</option><option>蔡予柔</option><option>Lica(楊馨捷)</option><option>甘惠榕</option><option>蘇蘇(蘇怡庭)</option><option>Nina(葉璇)</option><option>賴凱誼</option><option>妃妃(林家妃)</option><option>傅榮惠</option><option>范任鈞</option><option>陳嬿如</option><option>陳依渲</option><option>李采憶</option><option>Gina(劉錦宜)</option><option>陳春樺</option><option>57 林緯昕</option><option>小蘇(蘇閔貽)</option><option>Ava(劉俞欣)</option><option>張登傑</option><option>林庭嬅</option><option>曾思瑀</option></select>
@@ -798,6 +798,13 @@ function selectId(t){
 
 // ── 搜尋 ──
 let _nameTimer = null;
+function syncDoctorToSvcRows(){
+  const val = document.getElementById('f-doctor').value;
+  document.querySelectorAll('#service-list .svc-doctor').forEach(sel => {
+    if(sel.querySelector('option[value="'+val+'"]')) sel.value = val;
+  });
+}
+
 function onNameInput(){
   const val=document.getElementById('f-name').value.trim();
   const box=document.getElementById('suggest-box');
@@ -926,14 +933,18 @@ function addSvcRow(){
     <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor"></select></div>
     <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
     <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
-  // 填入執行醫師選項（直接從 f-doctor 取得）
+  // 填入執行醫師選項並自動帶入訂單頁已選的醫師
   const doctorSel = d.querySelector('.svc-doctor');
   const src = document.getElementById('f-doctor');
-  if(src) Array.from(src.options).forEach(o => {
-    const opt = document.createElement('option');
-    opt.value = o.value; opt.textContent = o.text;
-    doctorSel.appendChild(opt);
-  });
+  if(src){
+    Array.from(src.options).forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.value; opt.textContent = o.text;
+      doctorSel.appendChild(opt);
+    });
+    // 自動帶入已選的執行醫師
+    if(src.value) doctorSel.value = src.value;
+  }
   document.getElementById('service-list').appendChild(d);
 }
 function syncFromPurchase(){
@@ -956,10 +967,13 @@ function syncFromPurchase(){
       <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor"></select></div>
       <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
       <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
-    // 填入執行醫師選項
+    // 填入執行醫師選項並自動帶入已選醫師
     const dSel = d.querySelector('.svc-doctor');
     const fDoc = document.getElementById('f-doctor');
-    if(fDoc) Array.from(fDoc.options).forEach(o => { const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.text; dSel.appendChild(opt); });
+    if(fDoc){
+      Array.from(fDoc.options).forEach(o => { const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.text; dSel.appendChild(opt); });
+      if(fDoc.value) dSel.value = fDoc.value;
+    }
     // 設定療程選項
     const sel=d.querySelector('select');
     sel.innerHTML=TH_OPTS;
