@@ -745,20 +745,6 @@ function buildThOpts() {
 }
 const TH_OPTS = buildThOpts();
 
-// 醫師選單（與訂單資料頁「執行醫師」同步）
-function buildDoctorOpts() {
-  const sel = document.getElementById('f-doctor');
-  if (!sel) return '<option value="">—</option>';
-  return Array.from(sel.options).map(o =>
-    `<option value="${o.value}">${o.text}</option>`
-  ).join('');
-}
-// 延遲到 DOM 載入後才能讀 f-doctor
-let DOCTOR_OPTS = '<option value="">—</option>';
-document.addEventListener('DOMContentLoaded', () => {
-  DOCTOR_OPTS = buildDoctorOpts();
-});
-
 // 搜尋客戶（輸入姓名後呼叫後端）
 // 本地搜尋（從已載入的 CLIENT_LIST 過濾，瞬間完成）
 async function searchClients(query) {
@@ -937,8 +923,17 @@ function addSvcRow(){
     <div class="row-field"><span class="row-label">施作內容</span><select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select></div>
     <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="1" min="1" max="9999" oninput="checkSvcWarnings()"></div>
     <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">—</div></div>
+    <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor"></select></div>
     <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
     <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
+  // 填入執行醫師選項（直接從 f-doctor 取得）
+  const doctorSel = d.querySelector('.svc-doctor');
+  const src = document.getElementById('f-doctor');
+  if(src) Array.from(src.options).forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.value; opt.textContent = o.text;
+    doctorSel.appendChild(opt);
+  });
   document.getElementById('service-list').appendChild(d);
 }
 function syncFromPurchase(){
@@ -958,9 +953,13 @@ function syncFromPurchase(){
       <div class="row-field"><span class="row-label">施作內容</span><select onchange="onTherapyChange(this,'svc')">${TH_OPTS}</select></div>
       <div class="row-field row-field-sm"><span class="row-label">數量</span><input type="number" value="${qty}" min="1" max="9999" oninput="checkSvcWarnings()"></div>
       <div class="row-field row-field-sm"><span class="row-label">單位</span><div class="unit-display">${unit}</div></div>
-      <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor">${DOCTOR_OPTS}</select></div>
+      <div class="row-field row-field-sm"><span class="row-label">執行醫師</span><select class="svc-doctor"></select></div>
       <div class="row-field row-field-sm"><span class="row-label">備註</span><input type="text" placeholder="無特殊注意"></div>
       <button class="del-btn" onclick="this.closest('.t-row-svc').remove();checkSvcWarnings()">×</button>`;
+    // 填入執行醫師選項
+    const dSel = d.querySelector('.svc-doctor');
+    const fDoc = document.getElementById('f-doctor');
+    if(fDoc) Array.from(fDoc.options).forEach(o => { const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.text; dSel.appendChild(opt); });
     // 設定療程選項
     const sel=d.querySelector('select');
     sel.innerHTML=TH_OPTS;
