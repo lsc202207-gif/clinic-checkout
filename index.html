@@ -1252,7 +1252,7 @@ function buildPreview(){
   const total=parseInt((document.getElementById('sum-total').textContent||'0').replace(/[^0-9]/g,''))||0;
   const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
   const sb=document.getElementById('submit-btn');
-  if(sb)sb.disabled=Object.keys(payState).length>0&&paid<total;
+  if(sb)sb.disabled=Object.keys(payState).length>0&&paid<total&&currentPayStatus!=='deposit';
 }
 
 // ── 送出 ──
