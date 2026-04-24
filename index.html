@@ -879,8 +879,10 @@ async function loadClientDeposits(c) {
     let dhtml = `<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px">
       <div style="font-size:12px;font-weight:600;color:var(--warn,#d97706);margin-bottom:6px">⚠ 尚有未結清訂金</div>`;
     json.deposits.forEach(d=>{
-      dhtml += `<div style="font-size:12px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border)">
-        ${d.date} &nbsp;│&nbsp; <strong>NT$ ${Number(d.total).toLocaleString()}</strong> &nbsp;│&nbsp; ${d.note}
+      const balStr = d.balance>0 ? `尾款 <strong style="color:var(--warn,#d97706)">NT$ ${Number(d.balance).toLocaleString()}</strong>` : '已結清';
+      dhtml += `<div style="font-size:12px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span>${d.date} &nbsp;應付 NT$ ${Number(d.total).toLocaleString()}</span>
+        <span>${balStr}</span>
       </div>`;
     });
     dhtml += '</div>';
@@ -1128,6 +1130,7 @@ function setPayStatus(s){
   });
   const note = document.getElementById('deposit-note');
   if(note) note.style.display = (s==='deposit') ? 'block' : 'none';
+  updateDiffBar(); // 切換付款狀態時重新驗證
 }
 
 function renderPayEntries(){
@@ -1156,11 +1159,25 @@ function updateDiffBar(){
   const total=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
   const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
   const submitBtn=document.getElementById('submit-btn');
+  const isDeposit=(currentPayStatus==='deposit'); // 訂金模式允許付款不足
   if(!Object.keys(payState).length){bar.innerHTML='';if(submitBtn)submitBtn.disabled=false;return;}
   const diff=total-paid;
-  if(diff===0){bar.innerHTML=`<div class="diff-bar diff-ok"><span style="font-weight:600">金額核對正確</span><span style="font-weight:600">已收 NT$ ${paid.toLocaleString()}</span></div>`;if(submitBtn)submitBtn.disabled=false;}
-  else if(diff>0){bar.innerHTML=`<div class="diff-bar diff-warn"><span>尚未收足 <strong>NT$ ${diff.toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;if(submitBtn)submitBtn.disabled=true;}
-  else{bar.innerHTML=`<div class="diff-bar diff-err"><span>超收 <strong>NT$ ${Math.abs(diff).toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;if(submitBtn)submitBtn.disabled=false;}
+  if(diff===0){
+    bar.innerHTML=`<div class="diff-bar diff-ok"><span style="font-weight:600">金額核對正確</span><span style="font-weight:600">已收 NT$ ${paid.toLocaleString()}</span></div>`;
+    if(submitBtn)submitBtn.disabled=false;
+  } else if(diff>0){
+    if(isDeposit){
+      // 訂金模式：顯示尾款金額但允許送出
+      bar.innerHTML=`<div class="diff-bar diff-warn"><span>訂金 NT$ ${paid.toLocaleString()}，尾款 <strong>NT$ ${diff.toLocaleString()}</strong></span><span>應付總額 NT$ ${total.toLocaleString()}</span></div>`;
+      if(submitBtn)submitBtn.disabled=false;
+    } else {
+      bar.innerHTML=`<div class="diff-bar diff-warn"><span>尚未收足 <strong>NT$ ${diff.toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;
+      if(submitBtn)submitBtn.disabled=true;
+    }
+  } else {
+    bar.innerHTML=`<div class="diff-bar diff-err"><span>超收 <strong>NT$ ${Math.abs(diff).toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;
+    if(submitBtn)submitBtn.disabled=false;
+  }
 }
 
 function getPaySummary(){
@@ -1275,9 +1292,20 @@ async function submitOrder(){
     cashbackEarned: cbThis,
     payStatus:currentPayStatus,
     signature: window._signatureData || '',
+    balanceAmount:(()=>{
+      if(currentPayStatus!=='deposit') return 0;
+      const total=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
+      const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+      return Math.max(0,total-paid);
+    })(),
     note:(()=>{
       const n=document.getElementById('f-note').value||'';
-      if(currentPayStatus==='deposit') return '[訂金] '+n;
+      if(currentPayStatus==='deposit'){
+        const total=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
+        const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+        const bal=Math.max(0,total-paid);
+        return ('[訂金] 尾款 NT$'+bal.toLocaleString()+(n?' '+n:'')).trim();
+      }
       if(currentPayStatus==='balance') return '[補尾款] '+n;
       return n;
     })(),
