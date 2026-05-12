@@ -542,7 +542,7 @@ const THERAPY_TREE = {
     '除毛 手指+手背':'區','除毛 腳背+腳趾':'區','除毛 小腿':'區',
     '除毛 大腿':'區','除毛 全臉':'區','除毛 鬍子女':'區',
     '除毛 鬍子男':'區','除毛 VIO':'區','除毛 VBO':'區',
-    '除毛 子母線':'區','除毛 半背':'區','除毛 全胸':'區',
+    '除毛 子母線':'區','除毛 半背':'區','除毛 全胸':'區','除毛 其他':'區',
   },
   '雷射': {
     '皮秒':'堂',
@@ -581,15 +581,19 @@ const THERAPY_TREE = {
   '消疤針': {'消疤針':'cc'},
   '埋線魚骨': {'埋線魚骨':'條'},
   '埋線隆鼻': {'埋線隆鼻':'條'},
-  '肉毒Botox': {'肉毒Botax':'u'},
-  '肉毒奇蹟':  {'肉毒奇蹟':'u'},
+  '肉毒': {
+    'Botox':'u',
+    '肉毒奇蹟':'u',
+  },
   '消脂針':    {'消脂針':'組'},
   '點滴': {
     '防曬點滴':'支',
     '嫩膚點滴':'支',
     '保肝點滴':'支',
     '消脂點滴':'支',
+    '貴婦養生點滴':'支',
     '客製化點滴':'支',
+    '升級胺基酸':'支',
   },
   '止痛針':    {'止痛針':'次'},
   '猛健樂': {
@@ -1148,7 +1152,7 @@ function renderPayEntries(){
     html+=`<div class="pay-entry"><div class="pay-entry-row"><span class="pay-name">${m}</span><input class="pay-input" type="number" placeholder="金額" value="${payState[m].amount}" oninput="payState['${m}'].amount=this.value;updateDiffBar()"><span style="font-size:13px;color:var(--text2)">元</span></div>`;
     if(m==='轉帳'){
       html+=`<div class="bank-btns">`;
-      ['合庫','台新','中信','土地','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
+      ['仁緯','合庫','玉山'].forEach(b=>{html+=`<button class="bank-btn ${payState[m].bank===b?'on':''}" onclick="setBank('${m}','${b}',this)">${b}</button>`;});
       html+=`</div>`;
     }
     if(m==='無卡分期'){
