@@ -276,7 +276,7 @@ body{padding-bottom:40px}
         <select id="f-doctor" ><option value="">請選擇</option><option>王瑋璨</option><option>李宗晏</option><option>葉艾芸</option><option>莊鈞智</option></select>
       </div>
       <div class="field"><label>推薦人</label>
-        <select id="f-ref"><option value="">請選擇</option><option>蕭安里</option><option>Miko(邱芷畇)</option><option>王婷奕</option><option>牛牛(劉苡沙)</option><option>芷葳(廖芷涵)</option><option>尤允希</option><option>許滾兒(許芯瑀)</option><option>黃D(黃郁茹)</option><option>昆妮(黃懿)</option><option>麥麥(鄭珈詩)</option><option>MiMi(林孟萱)</option><option>Abby(陳仕英)</option><option>Irene(江苡綸)</option><option>小荳(陳守庭)</option><option>77(林明欣)</option><option>言言(許庭瑄)</option><option>Fairy(蔡宛臻)</option><option>方若葳</option><option>張嘉玲</option><option>蔡予柔</option><option>Lica(楊馨捷)</option><option>甘惠榕</option><option>蘇蘇(蘇怡庭)</option><option>Nina(葉璇)</option><option>賴凱誼</option><option>妃妃(林家妃)</option><option>傅榮惠</option><option>范任鈞</option><option>陳嬿如</option><option>陳依渲</option><option>李采憶</option><option>Gina(劉錦宜)</option><option>陳春樺</option><option>57 林緯昕</option><option>小蘇(蘇閔貽)</option><option>Ava(劉俞欣)</option><option>張登傑</option><option>林庭嬅</option><option>曾思瑀</option></select>
+        <select id="f-ref"><option value="">請選擇</option><option>蕭安里</option><option>Miko(邱芷畇)</option><option>王婷奕</option><option>牛牛(劉苡沙)</option><option>芷葳(廖芷涵)</option><option>尤允希</option><option>許滾兒(許芯瑀)</option><option>黃D(黃郁茹)</option><option>昆妮(黃懿)</option><option>麥麥(鄭珈詩)</option><option>MiMi(林孟萱)</option><option>Abby(陳仕英)</option><option>Irene(江苡綸)</option><option>小荳(陳守庭)</option><option>77(林明欣)</option><option>言言(許庭瑄)</option><option>Fairy(蔡宛臻)</option><option>方若葳</option><option>張嘉玲</option><option>蔡予柔</option><option>Lica(楊馨捷)</option><option>甘惠榕</option><option>蘇蘇(蘇怡庭)</option><option>Nina(葉璇)</option><option>賴凱誼</option><option>妃妃(林家妃)</option><option>傅榮惠</option><option>范任鈞</option><option>陳嬿如</option><option>陳依渲</option><option>李采憶</option><option>Gina(劉錦宜)</option><option>陳春樺</option><option>57 林緯昕</option><option>小蘇(蘇閔貽)</option><option>Ava(劉俞欣)</option><option>張登傑</option><option>林庭嬅</option><option>曾思瑀</option><option>貝卡(林品均)</option></select>
       </div>
       <div class="field"><label>管道來源</label>
         <select id="f-source"><option value="">請選擇</option><option>Polly IG</option><option>Polly 抖音</option><option>Polly thread</option><option>診所 IG</option><option>診所 抖音</option><option>診所 threads</option><option>路過</option><option>Google</option><option>業務</option><option>朋友介紹</option><option>Dcard</option><option>網紅行銷</option><option>王醫師</option><option>李醫師</option><option>小艾醫師</option><option>會員</option><option>其他</option></select>
@@ -794,6 +794,47 @@ function setSyncState(s,t){
 function initRows(){ addBuyRow(); addSvcRow(); }
 
 function goTab(name,el){
+  // 切換到結帳付款頁前驗證
+  if(name==='payment'){
+    const n=document.getElementById('f-name').value.trim();
+    if(!n){showToast('請先填寫客戶姓名');return;}
+    // 施作療程有任何警告（warn）或錯誤（err）都不能進入結帳
+    const anyWarn=document.querySelectorAll('#svc-warnings .warn, #svc-warnings .err');
+    if(anyWarn.length>0){
+      showToast('施作療程有未確認的項目，請先處理');return;
+    }
+  }
+  // 切換到確認送出頁前驗證
+  if(name==='preview'){
+    // 施作療程仍有警告或錯誤
+    const anyWarn=document.querySelectorAll('#svc-warnings .warn, #svc-warnings .err');
+    if(anyWarn.length>0){
+      showToast('施作療程有未確認的項目，請先處理');
+      goTab('order',document.querySelectorAll('.tab-btn')[0]);return;
+    }
+    // 驗證付款方式（只有應付金額 > 0 才需要選付款方式）
+    const previewTotal=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
+    if(previewTotal>0){
+      if(Object.keys(payState).length===0){
+        showToast('請先選擇付款方式');
+        goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+      }
+      const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+      if(paid<=0&&currentPayStatus!=='deposit'){
+        showToast('請輸入付款金額');
+        goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+      }
+      // 轉帳/無卡分期必須選擇銀行
+      if(payState['轉帳']&&parseFloat(payState['轉帳'].amount)>0&&!payState['轉帳'].bank){
+        showToast('請選擇轉帳銀行（仁緯 / 合庫 / 玉山）');
+        goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+      }
+      if(payState['無卡分期']&&parseFloat(payState['無卡分期'].amount)>0&&!payState['無卡分期'].bank){
+        showToast('請選擇無卡分期業者（中租 / 裕富）');
+        goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+      }
+    }
+  }
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if(el)el.classList.add('active');
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -1272,6 +1313,27 @@ function buildPreview(){
 async function submitOrder(){
   const name=document.getElementById('f-name').value;
   if(!name){showToast('請填寫客戶姓名');goTab('order',document.querySelectorAll('.tab-btn')[0]);return;}
+
+  // 驗證1：施作療程不能有錯誤警告（type=err）
+  const errWarns=document.querySelectorAll('#svc-warnings .err');
+  if(errWarns.length>0){showToast('施作療程有錯誤，請確認後再送出');goTab('order',document.querySelectorAll('.tab-btn')[0]);return;}
+
+  // 驗證2&3：只有應付金額 > 0 才需要驗證付款方式和金額
+  const submitTotal=parseInt((document.getElementById('sum-total')?.textContent||'0').replace(/[^0-9]/g,''))||0;
+  if(submitTotal>0){
+    if(Object.keys(payState).length===0){showToast('請選擇付款方式');goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;}
+    if(currentPayStatus!=='deposit'){
+      const paidTotal=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
+      if(paidTotal<=0){showToast('請輸入付款金額');goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;}
+    }
+    if(payState['轉帳']&&parseFloat(payState['轉帳'].amount)>0&&!payState['轉帳'].bank){
+      showToast('請選擇轉帳銀行（仁緯 / 合庫 / 玉山）');goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+    }
+    if(payState['無卡分期']&&parseFloat(payState['無卡分期'].amount)>0&&!payState['無卡分期'].bank){
+      showToast('請選擇無卡分期業者（中租 / 裕富）');goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
+    }
+  }
+
   const sb=document.getElementById('submit-btn');sb.disabled=true;sb.textContent='送出中…';
   setSyncState('loading','傳送資料中…');
   const sub=getSubtotal(), topup=getTopup(), cd=getCreditDeduct(), cbd=getCashbackDeduct();
