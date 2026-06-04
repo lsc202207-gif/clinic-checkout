@@ -270,7 +270,7 @@ body{padding-bottom:40px}
     </div>
     <div class="grid4">
       <div class="field"><label>結帳者</label>
-        <select id="f-owner"><option value="">請選擇</option><option>Polly</option><option>Irene</option><option>Gina</option><option>蔡蔡</option></select>Yuko</option></select>
+        <select id="f-owner"><option value="">請選擇</option><option>Polly</option><option>Irene</option><option>Gina</option><option>蔡蔡</option><option>Yuko</option></select>
       </div>
       <div class="field"><label>執行醫師</label>
         <select id="f-doctor" ><option value="">請選擇</option><option>王瑋璨</option><option>李宗晏</option><option>葉艾芸</option><option>莊鈞智</option></select>
@@ -557,7 +557,6 @@ const THERAPY_TREE = {
     '疤痕修復術':'堂',
     '芝潤水光':'堂',
     '水飛梭':'堂',
-    '水飛梭(含面膜)':'堂',
   },
   '蝴蝶電波':  {'蝴蝶電波':'堂'},
   '外泌體':    {'外泌體':'罐'},
@@ -821,7 +820,7 @@ function goTab(name,el){
         goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
       }
       const paid=Object.values(payState).reduce((s,v)=>s+(parseFloat(v.amount)||0),0);
-      if(paid<=0&&currentPayStatus!=='deposit'){
+      if(paid<=0&&currentPayStatus!=='deposit'&&currentPayStatus!=='balance'){
         showToast('請輸入付款金額');
         goTab('payment',document.querySelectorAll('.tab-btn')[1]);return;
       }
@@ -1230,8 +1229,14 @@ function updateDiffBar(){
       if(submitBtn)submitBtn.disabled=true;
     }
   } else {
-    bar.innerHTML=`<div class="diff-bar diff-err"><span>超收 <strong>NT$ ${Math.abs(diff).toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;
-    if(submitBtn)submitBtn.disabled=false;
+    // 補尾款模式：付款超過今日金額是正常的（含尾款），不擋送出
+    if(currentPayStatus==='balance'){
+      bar.innerHTML=`<div class="diff-bar diff-ok"><span style="font-weight:600">補尾款 NT$ ${paid.toLocaleString()}</span><span>今日療程 NT$ ${total.toLocaleString()}</span></div>`;
+      if(submitBtn)submitBtn.disabled=false;
+    } else {
+      bar.innerHTML=`<div class="diff-bar diff-err"><span>超收 <strong>NT$ ${Math.abs(diff).toLocaleString()}</strong></span><span>已輸入 NT$ ${paid.toLocaleString()} / 應付 NT$ ${total.toLocaleString()}</span></div>`;
+      if(submitBtn)submitBtn.disabled=false;
+    }
   }
 }
 
